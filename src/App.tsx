@@ -15,6 +15,7 @@ import RunnerDashboard from './components/RunnerDashboard';
 import ProfileModal from './components/ProfileModal';
 import RatingModal from './components/RatingModal';
 import AuthScreen from './components/AuthScreen';
+import ErrorBoundary from './components/ErrorBoundary';
 import { type Session, type User as SupabaseUser, type RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 // --- 5. CSS Injection (Includes Desktop Styles) ---
@@ -88,7 +89,8 @@ export default function App() {
           if (view === 'home') setView('home'); 
       } 
       else if (error?.code === 'PGRST116') { 
-          await supabase.from('users').insert({ id: user.id, name: user.email.split('@')[0], email: user.email, role: 'student' }); 
+          const email = user.email || '';
+          await supabase.from('users').insert({ id: user.id, name: email.split('@')[0], email: email, role: 'student' });
           window.location.reload(); 
       }
       setLoading(false);
@@ -156,30 +158,6 @@ export default function App() {
     if (!error) { setShowRequestForm(false); setView('tracker'); }
   };
 
-  const handleSaveProfile = async (d: Partial<UserProfile>) => {
-    if (!user) return;
-    await supabase.from('users').update(d).eq('id', user.id);
-    if (userProfile) {
-        setUserProfile({...userProfile, ...d});
-    }
-  };
-
-  const handleUpdateStatus = async (id: string, s: string) => {
-     await supabase.from('requests').update({ status: s }).eq('id', id);
-  }
-
-  const handleClaim = async (id: string) => {
-    if (!user) return;
-    await supabase.from('requests').update({ runner_id: user.id, status: 'accepted' }).eq('id', id);
-  }
-
-  const handleRatingSubmit = async (r: number) => {
-      if (showRatingModal) {
-          await supabase.from('requests').update({ rating: r }).eq('id', showRatingModal.id);
-          setShowRatingModal(null);
-      }
-  }
-
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
   
   if (!user) return (
@@ -195,7 +173,7 @@ export default function App() {
         <GlobalStyles />
         
         {/* Desktop Sidebar (Only visible on MD+) */}
-        <DesktopSidebar view={view} setView={setView} role={userProfile?.role} userProfile={userProfile || {name: 'User', role: 'student'}} onLogout={async () => { await supabase.auth.signOut(); setView('home'); }} />
+        <DesktopSidebar view={view} setView={setView} role={userProfile?.role || 'student'} userProfile={userProfile || {id: '', name: 'User', role: 'student', phone: ''}} onLogout={async () => { await supabase.auth.signOut(); setView('home'); }} />
         
         {/* Main Content Area */}
         <div className="flex-1 desktop-main bg-gray-50 min-h-screen flex flex-col relative">
@@ -263,7 +241,7 @@ export default function App() {
         {/* Modals & Overlays */}
         {showRequestForm && <RequestForm onSubmit={createRequest} onCancel={() => setShowRequestForm(false)} />}
         {showRatingModal && <RatingModal onSubmit={async (r: number) => { await supabase.from('requests').update({ rating: r }).eq('id', showRatingModal.id); setShowRatingModal(null); }} />}
-        {showProfileModal && userProfile && <ProfileModal userProfile={userProfile} onSave={async (d: any) => { await supabase.from('users').update(d).eq('id', user.id); setUserProfile({...userProfile, ...d}); }} onClose={() => setShowProfileModal(false)} />}
+      {showProfileModal && userProfile && <ProfileModal userProfile={userProfile} onSave={async (d: Partial<UserProfile>) => { await supabase.from('users').update(d).eq('id', user.id); setUserProfile({...userProfile, ...d}); }} onClose={() => setShowProfileModal(false)} />}
         {activeChatRequest && <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 pop-in"><div className="w-full max-w-md bg-white rounded-xl overflow-hidden relative"><button className="absolute top-2 right-2 text-white z-10" onClick={()=>setActiveChatRequest(null)}><X/></button><ChatBox requestId={activeChatRequest} currentUserId={user.id} /></div></div>}
       </div>
     </ErrorBoundary>
