@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   User, MapPin, Plus, Package, Clock, DollarSign, 
-  CheckCircle, Loader2, Navigation, Star, Menu, X,
-  LogOut, Shield, MessageCircle, Send, Settings, Phone,
-  ChevronRight, AlertCircle, Lock, Mail, RefreshCw, Copy,
-  ArrowRight, ShoppingBag, Bike, ExternalLink, QrCode, BadgeCheck, Camera, Upload,
-  Home, LayoutDashboard, List, UserCircle
+  CheckCircle, Loader2, Navigation, Star, X,
+  LogOut, MessageCircle, Send, Settings, Phone,
+  ChevronRight, AlertCircle, RefreshCw, Copy,
+  ArrowRight, ShoppingBag, Bike, QrCode, BadgeCheck, Camera,
+  Home, LayoutDashboard, UserCircle
 } from 'lucide-react';
 
 // --- Supabase Configuration ---
@@ -241,7 +241,7 @@ const BottomNav = ({ view, setView, role }: { view: string, setView: (v: string)
 };
 
 // 3. Top Navigation Bar (Desktop + Logo)
-const NavBar = ({ userProfile, setView, handleLogout, onEditProfile }: any) => {
+const NavBar = ({ userProfile, setView }: any) => {
   // Desktop Nav Logic can remain simple since we prioritize mobile bottom nav
   return (
     <nav className="bg-white/90 backdrop-blur-md border-b sticky top-0 z-40 shadow-sm">
@@ -541,7 +541,7 @@ const ProfileModal = ({ userProfile, onSave, onClose }: any) => {
     </div>
   );
 };
-const RatingModal = ({ request, onSubmit }: any) => {
+const RatingModal = ({ onSubmit }: any) => {
   const [rating, setRating] = useState(0);
   return (<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 pop-in"><div className="bg-white rounded-2xl p-8 text-center w-full max-w-sm"><h2 className="text-2xl font-bold mb-4">Rate Runner</h2><div className="flex justify-center gap-2 mb-6">{[1,2,3,4,5].map(s => <button key={s} onClick={() => setRating(s)}><Star size={32} className={s <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} /></button>)}</div><button onClick={() => onSubmit(rating)} disabled={rating === 0} className="w-full bg-black text-white py-3 rounded-xl font-bold btn-press">Submit</button></div></div>);
 };
@@ -635,19 +635,20 @@ export default function App() {
 
   if (!isSupabaseReady) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
-  if (!user) return <><GlobalStyles /><AuthScreen onLogin={(e, p) => handleAuth('login', e, p)} onSignup={(e, p, r) => handleAuth('signup', e, p, r)} /></>;
+  if (!user) return <><GlobalStyles /><AuthScreen onLogin={(e: string, p: string) => handleAuth('login', e, p)} onSignup={(e: string, p: string, r: UserRole) => handleAuth('signup', e, p, r)} /></>;
+  if (!userProfile) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24 font-sans text-gray-900 animate-scale-in">
       <GlobalStyles />
-      <NavBar userProfile={userProfile} setView={setView} handleLogout={async () => { await supabase.auth.signOut(); setView('home'); }} onEditProfile={() => setShowProfileModal(true)} />
+      <NavBar userProfile={userProfile} setView={setView} />
       
       <main className="pt-4 px-4 max-w-5xl mx-auto">
         {view === 'home' && (
-           userProfile?.role === 'student' ? (
+           userProfile.role === 'student' ? (
              <div className="space-y-8 animate-slide-up">
                <header className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden"><div className="relative z-10"><h1 className="text-3xl font-bold mb-2">We run. You study.</h1><button onClick={() => setShowRequestForm(true)} className="bg-white text-blue-600 px-6 py-3 rounded-xl font-bold mt-4 btn-press flex items-center gap-2"><Plus size={20}/> Request Runner</button></div><div className="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl animate-blob"></div></header>
-               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{['Food','Print','Shop','Drop'].map((t,i) => <button key={t} onClick={() => setShowRequestForm(true)} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover-lift text-center font-bold text-gray-700 btn-press">{t}</button>)}</div>
+               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{['Food','Print','Shop','Drop'].map((t) => <button key={t} onClick={() => setShowRequestForm(true)} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover-lift text-center font-bold text-gray-700 btn-press">{t}</button>)}</div>
              </div>
            ) : (
              <Marketplace requests={requests} onClaim={async (id) => { await supabase.from('requests').update({ runner_id: user.id, status: 'accepted' }).eq('id', id); }} onUpdateStatus={async (id, s) => { await supabase.from('requests').update({ status: s }).eq('id', id); }} userId={user.id} onRefresh={fetchRequests} userProfile={userProfile} />
@@ -659,11 +660,11 @@ export default function App() {
         {view === 'profile' && <ProfileView userProfile={userProfile} onEdit={() => setShowProfileModal(true)} onLogout={async () => { await supabase.auth.signOut(); setView('home'); }} />}
       </main>
 
-      <BottomNav view={view} setView={setView} role={userProfile?.role} />
+      <BottomNav view={view} setView={setView} role={userProfile.role} />
 
       {showRequestForm && <RequestForm onSubmit={createRequest} onCancel={() => setShowRequestForm(false)} />}
-      {showRatingModal && <RatingModal request={showRatingModal} onSubmit={async (r) => { await supabase.from('requests').update({ rating: r }).eq('id', showRatingModal.id); setShowRatingModal(null); }} />}
-      {showProfileModal && <ProfileModal userProfile={userProfile} onSave={async (d) => { await supabase.from('users').update(d).eq('id', user.id); setUserProfile({...userProfile, ...d}); }} onClose={() => setShowProfileModal(false)} />}
+      {showRatingModal && <RatingModal onSubmit={async (r: number) => { await supabase.from('requests').update({ rating: r }).eq('id', showRatingModal.id); setShowRatingModal(null); }} />}
+      {showProfileModal && <ProfileModal userProfile={userProfile} onSave={async (d: any) => { await supabase.from('users').update(d).eq('id', user.id); setUserProfile({...userProfile, ...d}); }} onClose={() => setShowProfileModal(false)} />}
       {activeChatRequest && <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 pop-in"><div className="w-full max-w-md bg-white rounded-xl overflow-hidden relative"><button className="absolute top-2 right-2 text-white z-10" onClick={()=>setActiveChatRequest(null)}><X/></button><ChatBox requestId={activeChatRequest} currentUserId={user.id} /></div></div>}
     </div>
   );
