@@ -8,7 +8,7 @@ import {
   Home, LayoutDashboard, UserCircle
 } from 'lucide-react';
 
-// --- 1. Error Boundary (Catches Crashes) ---
+// --- 1. Error Boundary (Catches Crashes & Shows Errors) ---
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
   constructor(props: any) {
     super(props);
@@ -20,7 +20,7 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
   }
 
   componentDidCatch(error: any, errorInfo: any) {
-    console.error("Uncaught error:", error, errorInfo);
+    console.error("CRITICAL APP CRASH:", error, errorInfo);
   }
 
   render() {
@@ -51,7 +51,7 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
 const SUPABASE_URL = 'https://fbjqzyyvaeqgrcavjvru.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZianF6eXl2YWVxZ3JjYXZqdnJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQwNzE1MjgsImV4cCI6MjA3OTY0NzUyOH0.6MOL0HoWwFB1dCn_I5kAo79PVLA1JTCBxFfcqMZJF_A';
 
-// Global variable placeholder
+// Global variable placeholder - we initialize this later
 let supabase: any = null;
 
 declare global {
@@ -221,12 +221,9 @@ const ChatBox = ({ requestId, currentUserId, embedded = false }: { requestId: st
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !supabase) return;
-    
-    // Optimistic update
     const tempMsg = { id: Math.random().toString(), request_id: requestId, sender_id: currentUserId, text: newMessage, created_at: new Date().toISOString() };
     setMessages(prev => [...prev, tempMsg]);
     setNewMessage('');
-    
     await supabase.from('messages').insert({ request_id: requestId, sender_id: currentUserId, text: tempMsg.text });
   };
 
@@ -613,6 +610,7 @@ const AuthScreen = ({ onLogin, onSignup }: any) => {
 
 export default function App() {
   const [isSupabaseReady, setIsSupabaseReady] = useState(false);
+  const [scriptError, setScriptError] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [view, setView] = useState('home'); // 'home' | 'tracker' | 'dashboard' | 'profile'
@@ -641,7 +639,8 @@ export default function App() {
       const script = document.createElement('script'); 
       script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"; 
       script.async = true;
-      script.onload = initSupabase; 
+      script.onload = initSupabase;
+      script.onerror = () => setScriptError(true);
       document.body.appendChild(script);
     }
   }, []);
@@ -651,7 +650,7 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }: any) => {
         setUser(session?.user ?? null);
         if (!session?.user) {
-            setLoading(false); // If no session, stop loading immediately so we see login screen
+            setLoading(false);
         }
     });
     
@@ -669,7 +668,7 @@ export default function App() {
     const fetchProfile = async () => {
       if (!user || !supabase) return;
       const { data, error } = await supabase.from('users').select('*').eq('id', user.id).single();
-      if (data) { setUserProfile(data); if (view === 'home') setView('home'); } // Keep current view if set, else default
+      if (data) { setUserProfile(data); if (view === 'home') setView('home'); } 
       else if (error?.code === 'PGRST116') { await supabase.from('users').insert({ id: user.id, name: user.email.split('@')[0], email: user.email, role: 'student' }); window.location.reload(); }
       setLoading(false);
     };
@@ -696,9 +695,8 @@ export default function App() {
     if (!error) { setShowRequestForm(false); setView('tracker'); }
   };
 
-  // --- CRITICAL FIX FOR WHITE SCREEN ---
-  // If Supabase isn't ready (script hasn't loaded), show a spinner.
-  // This prevents the app from trying to render components that crash without 'supabase'.
+  if (scriptError) return <div className="min-h-screen flex items-center justify-center bg-red-50 text-red-600 font-bold">Failed to load app resources. Check your internet connection.</div>;
+
   if (!isSupabaseReady) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="flex flex-col items-center gap-4"><Loader2 className="animate-spin text-blue-600" size={40}/><p className="text-gray-500 font-medium">Connecting to Runners...</p></div></div>;
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
