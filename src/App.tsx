@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-// We use the standard import. This relies on your 'npm install @supabase/supabase-js'
-import { createClient } from '@supabase/supabase-js';
 import { 
   User, MapPin, Plus, Package, Clock, DollarSign, 
   CheckCircle, Loader2, Navigation, Star, X,
@@ -53,13 +51,14 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
 const SUPABASE_URL = 'https://fbjqzyyvaeqgrcavjvru.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZianF6eXl2YWVxZ3JjYXZqdnJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQwNzE1MjgsImV4cCI6MjA3OTY0NzUyOH0.6MOL0HoWwFB1dCn_I5kAo79PVLA1JTCBxFfcqMZJF_A';
 
-// Initialize Client (Standard Method)
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
+// Global variable placeholder
+let supabase: any = null;
+
+declare global {
+  interface Window {
+    supabase: any;
   }
-});
+}
 
 // --- Assets ---
 const LOGO_URL = "Messenger_creation_4C44CD5D-7E79-4FF6-A824-D7FF2757FE1B.jpeg";
@@ -204,6 +203,7 @@ const ChatBox = ({ requestId, currentUserId, embedded = false }: { requestId: st
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!supabase) return;
     const fetchMessages = async () => {
       const { data } = await supabase.from('messages').select('*').eq('request_id', requestId).order('created_at', { ascending: true });
       if (data) setMessages(data);
@@ -220,7 +220,7 @@ const ChatBox = ({ requestId, currentUserId, embedded = false }: { requestId: st
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !supabase) return;
     
     // Optimistic update
     const tempMsg = { id: Math.random().toString(), request_id: requestId, sender_id: currentUserId, text: newMessage, created_at: new Date().toISOString() };
@@ -612,6 +612,7 @@ const AuthScreen = ({ onLogin, onSignup }: any) => {
 // --- Main App ---
 
 export default function App() {
+  const [isSupabaseReady, setIsSupabaseReady] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [view, setView] = useState('home'); // 'home' | 'tracker' | 'dashboard' | 'profile'
@@ -622,16 +623,38 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [activeChatRequest, setActiveChatRequest] = useState<string|null>(null);
 
+  // Initialize Supabase via CDN script injection
+  // This is the most reliable way for environments without package managers
   useEffect(() => {
     if (window.Notification && Notification.permission !== 'granted') Notification.requestPermission();
+    
+    const initSupabase = () => {
+      if (window.supabase) { 
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true } }); 
+        setIsSupabaseReady(true); 
+      }
+    };
+
+    if (window.supabase) {
+      initSupabase();
+    } else {
+      const script = document.createElement('script'); 
+      script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"; 
+      script.async = true;
+      script.onload = initSupabase; 
+      document.body.appendChild(script);
+    }
   }, []);
 
   useEffect(() => {
+    if (!isSupabaseReady || !supabase) return;
     supabase.auth.getSession().then(({ data: { session } }: any) => {
         setUser(session?.user ?? null);
-        if (!session?.user) setLoading(false);
+        if (!session?.user) {
+            setLoading(false); // If no session, stop loading immediately so we see login screen
+        }
     });
-
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => { 
         setUser(session?.user ?? null); 
         if (!session?.user) { 
@@ -640,26 +663,26 @@ export default function App() {
         } 
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isSupabaseReady]);
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!user) return;
+      if (!user || !supabase) return;
       const { data, error } = await supabase.from('users').select('*').eq('id', user.id).single();
       if (data) { setUserProfile(data); if (view === 'home') setView('home'); } // Keep current view if set, else default
       else if (error?.code === 'PGRST116') { await supabase.from('users').insert({ id: user.id, name: user.email.split('@')[0], email: user.email, role: 'student' }); window.location.reload(); }
       setLoading(false);
     };
     if (user) fetchProfile();
-  }, [user]);
+  }, [user, isSupabaseReady]);
 
   const fetchRequests = useCallback(async () => {
      if (!supabase) return;
      const { data } = await supabase.from('requests').select('*').order('created_at', { ascending: false });
      if (data) setRequests(data);
-  }, []);
+  }, [isSupabaseReady]);
 
-  useEffect(() => { if (user) { fetchRequests(); const ch = supabase.channel('public:requests').on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, (p: any) => { if (p.eventType === 'INSERT') setRequests(prev => [p.new, ...prev]); else if (p.eventType === 'UPDATE') setRequests(prev => prev.map(r => r.id === p.new.id ? p.new : r)); }).subscribe(); return () => supabase.removeChannel(ch); } }, [user, fetchRequests]);
+  useEffect(() => { if (user && isSupabaseReady) { fetchRequests(); const ch = supabase.channel('public:requests').on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, (p: any) => { if (p.eventType === 'INSERT') setRequests(prev => [p.new, ...prev]); else if (p.eventType === 'UPDATE') setRequests(prev => prev.map(r => r.id === p.new.id ? p.new : r)); }).subscribe(); return () => supabase.removeChannel(ch); } }, [user, fetchRequests, isSupabaseReady]);
 
   const handleAuth = async (type: 'login'|'signup', ...args: any[]) => {
     const { error, data } = await (type === 'login' ? supabase.auth.signInWithPassword({ email: args[0], password: args[1] }) : supabase.auth.signUp({ email: args[0], password: args[1], options: { data: { role: args[2] } } }));
@@ -673,7 +696,12 @@ export default function App() {
     if (!error) { setShowRequestForm(false); setView('tracker'); }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="flex flex-col items-center gap-4"><Loader2 className="animate-spin text-blue-600" size={40}/><p className="text-gray-500 font-medium">Starting App...</p></div></div>;
+  // --- CRITICAL FIX FOR WHITE SCREEN ---
+  // If Supabase isn't ready (script hasn't loaded), show a spinner.
+  // This prevents the app from trying to render components that crash without 'supabase'.
+  if (!isSupabaseReady) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="flex flex-col items-center gap-4"><Loader2 className="animate-spin text-blue-600" size={40}/><p className="text-gray-500 font-medium">Connecting to Runners...</p></div></div>;
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
   
   if (!user) return (
     <ErrorBoundary>
