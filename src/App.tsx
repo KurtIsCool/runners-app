@@ -13,10 +13,8 @@ const SUPABASE_URL = 'https://fbjqzyyvaeqgrcavjvru.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZianF6eXl2YWVxZ3JjYXZqdnJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQwNzE1MjgsImV4cCI6MjA3OTY0NzUyOH0.6MOL0HoWwFB1dCn_I5kAo79PVLA1JTCBxFfcqMZJF_A';
 
 // --- Global Variable Placeholder ---
-// We use a variable here so TypeScript doesn't complain
 let supabase: any = null;
 
-// This tells TypeScript: "Trust me, 'supabase' will exist on the window object later"
 declare global {
   interface Window {
     supabase: any;
