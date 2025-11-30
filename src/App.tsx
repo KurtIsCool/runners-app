@@ -12,9 +12,11 @@ import {
 const SUPABASE_URL = 'https://fbjqzyyvaeqgrcavjvru.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZianF6eXl2YWVxZ3JjYXZqdnJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQwNzE1MjgsImV4cCI6MjA3OTY0NzUyOH0.6MOL0HoWwFB1dCn_I5kAo79PVLA1JTCBxFfcqMZJF_A';
 
-// Global Supabase client placeholder
+// --- Global Variable Placeholder ---
+// We use a variable here so TypeScript doesn't complain
 let supabase: any = null;
 
+// This tells TypeScript: "Trust me, 'supabase' will exist on the window object later"
 declare global {
   interface Window {
     supabase: any;
@@ -493,7 +495,7 @@ const RequestTracker = ({ requests, currentUserId, onRate }: { requests: Request
         </div>
       ))}
       {pastRequests.length > 0 && <div className="pt-8 border-t stagger-enter" style={{animationDelay: '200ms'}}><h3 className="text-lg font-bold text-gray-600 mb-4">Past Errands</h3><div className="space-y-4">{pastRequests.map((req, i) => (<div key={req.id} style={{animationDelay: `${i*50}ms`}} className="stagger-enter bg-gray-50 rounded-xl p-4 flex justify-between items-center hover:bg-gray-100 transition-colors hover-lift"><div><div className="flex items-center gap-2"><span className="font-bold capitalize text-gray-900">{req.type}</span>{req.rating && <span className="flex items-center text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-bold"><Star size={10} className="fill-yellow-600 text-yellow-600 mr-1"/> {req.rating}</span>}</div><span className="text-gray-500 text-xs">{new Date(req.created_at).toLocaleDateString()}</span></div>{!req.rating && req.status === 'completed' ? <button onClick={() => onRate(req, 0)} className="text-xs bg-black text-white px-3 py-1.5 rounded-lg font-bold hover:bg-gray-800 btn-press">Rate Now</button> : <div className="text-sm font-medium text-green-700 bg-green-100 px-2 py-1 rounded">{req.status === 'cancelled' ? 'Cancelled' : 'Done'}</div>}</div>))}</div></div>}
-      {chatRequestId && (<div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 pop-in"><div className="w-full max-w-md bg-white rounded-xl overflow-hidden relative"><button className="absolute top-2 right-2 text-white z-10" onClick={()=>setChatRequestId(null)}><X/></button><ChatBox requestId={chatRequestId} currentUserId={currentUserId} /></div></div>)}
+      {chatRequestId && (<div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 pop-in"><div className="w-full max-w-md bg-white rounded-xl overflow-hidden relative"><button className="absolute top-2 right-2 text-white z-10" onClick={()=>setChatRequestId(null)}><X/></button><ChatBox requestId={chatRequestId} currentUserId={user.id} /></div></div>)}
     </div>
   );
 };
@@ -584,14 +586,12 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [activeChatRequest, setActiveChatRequest] = useState<string|null>(null);
 
-  // Initialize Supabase with Script Injection to ensure compatibility
-  // in this preview environment. 
+  // Initialize Supabase via CDN script injection
   useEffect(() => {
     if (window.Notification && Notification.permission !== 'granted') Notification.requestPermission();
     
     const initSupabase = () => {
       if (window.supabase) { 
-        // @ts-ignore
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true } }); 
         setIsSupabaseReady(true); 
       }
@@ -610,7 +610,13 @@ export default function App() {
 
   useEffect(() => {
     if (!isSupabaseReady || !supabase) return;
-    supabase.auth.getSession().then(({ data: { session } }: any) => setUser(session?.user ?? null));
+    supabase.auth.getSession().then(({ data: { session } }: any) => {
+        setUser(session?.user ?? null);
+        if (!session?.user) {
+            setLoading(false); // If no session, stop loading immediately so we see login screen
+        }
+    });
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => { 
         setUser(session?.user ?? null); 
         if (!session?.user) { 
@@ -638,7 +644,7 @@ export default function App() {
      if (data) setRequests(data);
   }, [isSupabaseReady]);
 
-  useEffect(() => { if (user) { fetchRequests(); const ch = supabase.channel('public:requests').on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, (p: any) => { if (p.eventType === 'INSERT') setRequests(prev => [p.new, ...prev]); else if (p.eventType === 'UPDATE') setRequests(prev => prev.map(r => r.id === p.new.id ? p.new : r)); }).subscribe(); return () => supabase.removeChannel(ch); } }, [user, fetchRequests]);
+  useEffect(() => { if (user && isSupabaseReady) { fetchRequests(); const ch = supabase.channel('public:requests').on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, (p: any) => { if (p.eventType === 'INSERT') setRequests(prev => [p.new, ...prev]); else if (p.eventType === 'UPDATE') setRequests(prev => prev.map(r => r.id === p.new.id ? p.new : r)); }).subscribe(); return () => supabase.removeChannel(ch); } }, [user, fetchRequests, isSupabaseReady]);
 
   const handleAuth = async (type: 'login'|'signup', ...args: any[]) => {
     const { error, data } = await (type === 'login' ? supabase.auth.signInWithPassword({ email: args[0], password: args[1] }) : supabase.auth.signUp({ email: args[0], password: args[1], options: { data: { role: args[2] } } }));
@@ -652,8 +658,10 @@ export default function App() {
     if (!error) { setShowRequestForm(false); setView('tracker'); }
   };
 
-  // Prevent "White Screen": Wait for script to load before trying to render app logic
-  if (!isSupabaseReady) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
+  // --- CRITICAL FIX FOR WHITE SCREEN ---
+  // If Supabase isn't ready (script hasn't loaded), show a spinner.
+  // This prevents the app from trying to render components that crash without 'supabase'.
+  if (!isSupabaseReady) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="flex flex-col items-center gap-4"><Loader2 className="animate-spin text-blue-600" size={40}/><p className="text-gray-500 font-medium">Connecting to Runners...</p></div></div>;
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
   if (!user) return <><GlobalStyles /><AuthScreen onLogin={(e: string, p: string) => handleAuth('login', e, p)} onSignup={(e: string, p: string, r: UserRole) => handleAuth('signup', e, p, r)} /></>;
