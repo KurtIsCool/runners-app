@@ -12,6 +12,7 @@ import {
 const SUPABASE_URL = 'https://fbjqzyyvaeqgrcavjvru.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZianF6eXl2YWVxZ3JjYXZqdnJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQwNzE1MjgsImV4cCI6MjA3OTY0NzUyOH0.6MOL0HoWwFB1dCn_I5kAo79PVLA1JTCBxFfcqMZJF_A';
 
+// Global Supabase client
 let supabase: any = null;
 
 declare global {
@@ -583,22 +584,38 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [activeChatRequest, setActiveChatRequest] = useState<string|null>(null);
 
+  // Initialize Supabase with Script Injection to ensure compatibility
   useEffect(() => {
     if (window.Notification && Notification.permission !== 'granted') Notification.requestPermission();
+    
     const initSupabase = () => {
-      if (window.supabase) { supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true } }); setIsSupabaseReady(true); }
+      if (window.supabase) { 
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true } }); 
+        setIsSupabaseReady(true); 
+      }
     };
-    if (window.supabase) initSupabase();
-    else {
-      const script = document.createElement('script'); script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"; script.async = true;
-      script.onload = initSupabase; document.body.appendChild(script);
+
+    if (window.supabase) {
+      initSupabase();
+    } else {
+      const script = document.createElement('script'); 
+      script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"; 
+      script.async = true;
+      script.onload = initSupabase; 
+      document.body.appendChild(script);
     }
   }, []);
 
   useEffect(() => {
     if (!isSupabaseReady || !supabase) return;
     supabase.auth.getSession().then(({ data: { session } }: any) => setUser(session?.user ?? null));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => { setUser(session?.user ?? null); if (!session?.user) { setUserProfile(null); setLoading(false); } });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => { 
+        setUser(session?.user ?? null); 
+        if (!session?.user) { 
+            setUserProfile(null); 
+            setLoading(false); 
+        } 
+    });
     return () => subscription.unsubscribe();
   }, [isSupabaseReady]);
 
@@ -633,7 +650,9 @@ export default function App() {
     if (!error) { setShowRequestForm(false); setView('tracker'); }
   };
 
+  // Prevent "White Screen": Wait for script to load before trying to render app logic
   if (!isSupabaseReady) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
   if (!user) return <><GlobalStyles /><AuthScreen onLogin={(e: string, p: string) => handleAuth('login', e, p)} onSignup={(e: string, p: string, r: UserRole) => handleAuth('signup', e, p, r)} /></>;
   if (!userProfile) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
