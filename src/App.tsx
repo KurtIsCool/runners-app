@@ -12,7 +12,7 @@ import {
 const SUPABASE_URL = 'https://fbjqzyyvaeqgrcavjvru.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZianF6eXl2YWVxZ3JjYXZqdnJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQwNzE1MjgsImV4cCI6MjA3OTY0NzUyOH0.6MOL0HoWwFB1dCn_I5kAo79PVLA1JTCBxFfcqMZJF_A';
 
-// Global Supabase client
+// Global Supabase client placeholder
 let supabase: any = null;
 
 declare global {
@@ -175,7 +175,7 @@ const ChatBox = ({ requestId, currentUserId, embedded = false }: { requestId: st
         if (payload.new.sender_id !== currentUserId) sendNotification("New Message", payload.new.text);
       }).subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [requestId]);
+  }, [requestId, currentUserId]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -585,11 +585,13 @@ export default function App() {
   const [activeChatRequest, setActiveChatRequest] = useState<string|null>(null);
 
   // Initialize Supabase with Script Injection to ensure compatibility
+  // in this preview environment. 
   useEffect(() => {
     if (window.Notification && Notification.permission !== 'granted') Notification.requestPermission();
     
     const initSupabase = () => {
       if (window.supabase) { 
+        // @ts-ignore
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true } }); 
         setIsSupabaseReady(true); 
       }
