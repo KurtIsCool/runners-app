@@ -13,6 +13,7 @@ const SUPABASE_URL = 'https://fbjqzyyvaeqgrcavjvru.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZianF6eXl2YWVxZ3JjYXZqdnJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQwNzE1MjgsImV4cCI6MjA3OTY0NzUyOH0.6MOL0HoWwFB1dCn_I5kAo79PVLA1JTCBxFfcqMZJF_A';
 
 // --- Global Variable Placeholder ---
+// We use 'let' so we can assign it later once the script loads
 let supabase: any = null;
 
 declare global {
@@ -590,6 +591,7 @@ export default function App() {
     
     const initSupabase = () => {
       if (window.supabase) { 
+        // @ts-ignore
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true } }); 
         setIsSupabaseReady(true); 
       }
@@ -608,13 +610,7 @@ export default function App() {
 
   useEffect(() => {
     if (!isSupabaseReady || !supabase) return;
-    supabase.auth.getSession().then(({ data: { session } }: any) => {
-        setUser(session?.user ?? null);
-        if (!session?.user) {
-            setLoading(false); // If no session, stop loading immediately so we see login screen
-        }
-    });
-    
+    supabase.auth.getSession().then(({ data: { session } }: any) => setUser(session?.user ?? null));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => { 
         setUser(session?.user ?? null); 
         if (!session?.user) { 
@@ -642,7 +638,7 @@ export default function App() {
      if (data) setRequests(data);
   }, [isSupabaseReady]);
 
-  useEffect(() => { if (user && isSupabaseReady) { fetchRequests(); const ch = supabase.channel('public:requests').on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, (p: any) => { if (p.eventType === 'INSERT') setRequests(prev => [p.new, ...prev]); else if (p.eventType === 'UPDATE') setRequests(prev => prev.map(r => r.id === p.new.id ? p.new : r)); }).subscribe(); return () => supabase.removeChannel(ch); } }, [user, fetchRequests, isSupabaseReady]);
+  useEffect(() => { if (user) { fetchRequests(); const ch = supabase.channel('public:requests').on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, (p: any) => { if (p.eventType === 'INSERT') setRequests(prev => [p.new, ...prev]); else if (p.eventType === 'UPDATE') setRequests(prev => prev.map(r => r.id === p.new.id ? p.new : r)); }).subscribe(); return () => supabase.removeChannel(ch); } }, [user, fetchRequests]);
 
   const handleAuth = async (type: 'login'|'signup', ...args: any[]) => {
     const { error, data } = await (type === 'login' ? supabase.auth.signInWithPassword({ email: args[0], password: args[1] }) : supabase.auth.signUp({ email: args[0], password: args[1], options: { data: { role: args[2] } } }));
