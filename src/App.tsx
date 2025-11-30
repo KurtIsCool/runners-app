@@ -8,12 +8,50 @@ import {
   Home, LayoutDashboard, UserCircle
 } from 'lucide-react';
 
-// --- Supabase Configuration ---
+// --- 1. Error Boundary (Catches Crashes & Shows Errors) ---
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-red-50 text-red-900 font-sans">
+          <div className="bg-white p-6 rounded-2xl shadow-xl max-w-md w-full border border-red-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-red-100 p-2 rounded-full"><AlertCircle className="text-red-600" size={24} /></div>
+              <h1 className="text-xl font-bold">App Crashed</h1>
+            </div>
+            <p className="mb-4 text-sm text-gray-600">Something went wrong. Please show this to the developer:</p>
+            <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-auto max-h-40 mb-4">
+              {this.state.error?.toString() || "Unknown Error"}
+            </pre>
+            <button onClick={() => window.location.reload()} className="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition">
+              Reload Application
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// --- 2. Supabase Configuration ---
 const SUPABASE_URL = 'https://fbjqzyyvaeqgrcavjvru.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZianF6eXl2YWVxZ3JjYXZqdnJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQwNzE1MjgsImV4cCI6MjA3OTY0NzUyOH0.6MOL0HoWwFB1dCn_I5kAo79PVLA1JTCBxFfcqMZJF_A';
 
-// --- Global Variable Placeholder ---
-// We use 'let' so we can assign it later once the script loads
+// Use 'let' so we can assign it dynamically (Fixes "Assignment to constant" error)
 let supabase: any = null;
 
 declare global {
@@ -244,14 +282,11 @@ const BottomNav = ({ view, setView, role }: { view: string, setView: (v: string)
 
 // 3. Top Navigation Bar (Desktop + Logo)
 const NavBar = ({ userProfile, setView }: any) => {
-  // Desktop Nav Logic can remain simple since we prioritize mobile bottom nav
   return (
     <nav className="bg-white/90 backdrop-blur-md border-b sticky top-0 z-40 shadow-sm">
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex justify-between h-16">
           <div className="flex items-center cursor-pointer gap-2" onClick={() => setView('home')}><AppLogo /></div>
-          
-          {/* Desktop Links (Hidden on Mobile) */}
           <div className="hidden md:flex items-center space-x-6">
             {userProfile && (
               <>
@@ -271,7 +306,7 @@ const NavBar = ({ userProfile, setView }: any) => {
   );
 };
 
-// 4. Profile View (New Feature)
+// 4. Profile View
 const ProfileView = ({ userProfile, onEdit, onLogout }: { userProfile: UserProfile, onEdit: () => void, onLogout: () => void }) => {
   return (
     <div className="p-4 pb-24 animate-slide-up max-w-xl mx-auto">
@@ -369,7 +404,7 @@ const RequestForm = ({ onSubmit, onCancel }: any) => {
   );
 };
 
-// 6. Active Job View (Mission Control)
+// 6. Active Job View
 const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile }: { job: Request, userId: string, onUpdateStatus: (id: string, status: RequestStatus) => void, userProfile: UserProfile }) => {
   const [updating, setUpdating] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -586,12 +621,12 @@ export default function App() {
   const [activeChatRequest, setActiveChatRequest] = useState<string|null>(null);
 
   // Initialize Supabase via CDN script injection
+  // This is the most reliable way for environments without package managers
   useEffect(() => {
     if (window.Notification && Notification.permission !== 'granted') Notification.requestPermission();
     
     const initSupabase = () => {
       if (window.supabase) { 
-        // @ts-ignore
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true } }); 
         setIsSupabaseReady(true); 
       }
@@ -610,7 +645,13 @@ export default function App() {
 
   useEffect(() => {
     if (!isSupabaseReady || !supabase) return;
-    supabase.auth.getSession().then(({ data: { session } }: any) => setUser(session?.user ?? null));
+    supabase.auth.getSession().then(({ data: { session } }: any) => {
+        setUser(session?.user ?? null);
+        if (!session?.user) {
+            setLoading(false); // If no session, stop loading immediately so we see login screen
+        }
+    });
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => { 
         setUser(session?.user ?? null); 
         if (!session?.user) { 
@@ -638,7 +679,7 @@ export default function App() {
      if (data) setRequests(data);
   }, [isSupabaseReady]);
 
-  useEffect(() => { if (user) { fetchRequests(); const ch = supabase.channel('public:requests').on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, (p: any) => { if (p.eventType === 'INSERT') setRequests(prev => [p.new, ...prev]); else if (p.eventType === 'UPDATE') setRequests(prev => prev.map(r => r.id === p.new.id ? p.new : r)); }).subscribe(); return () => supabase.removeChannel(ch); } }, [user, fetchRequests]);
+  useEffect(() => { if (user && isSupabaseReady) { fetchRequests(); const ch = supabase.channel('public:requests').on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, (p: any) => { if (p.eventType === 'INSERT') setRequests(prev => [p.new, ...prev]); else if (p.eventType === 'UPDATE') setRequests(prev => prev.map(r => r.id === p.new.id ? p.new : r)); }).subscribe(); return () => supabase.removeChannel(ch); } }, [user, fetchRequests, isSupabaseReady]);
 
   const handleAuth = async (type: 'login'|'signup', ...args: any[]) => {
     const { error, data } = await (type === 'login' ? supabase.auth.signInWithPassword({ email: args[0], password: args[1] }) : supabase.auth.signUp({ email: args[0], password: args[1], options: { data: { role: args[2] } } }));
@@ -658,37 +699,46 @@ export default function App() {
   if (!isSupabaseReady) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="flex flex-col items-center gap-4"><Loader2 className="animate-spin text-blue-600" size={40}/><p className="text-gray-500 font-medium">Connecting to Runners...</p></div></div>;
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
-  if (!user) return <><GlobalStyles /><AuthScreen onLogin={(e: string, p: string) => handleAuth('login', e, p)} onSignup={(e: string, p: string, r: UserRole) => handleAuth('signup', e, p, r)} /></>;
+  
+  if (!user) return (
+    <ErrorBoundary>
+      <GlobalStyles />
+      <AuthScreen onLogin={(e: string, p: string) => handleAuth('login', e, p)} onSignup={(e: string, p: string, r: UserRole) => handleAuth('signup', e, p, r)} />
+    </ErrorBoundary>
+  );
+
   if (!userProfile) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 font-sans text-gray-900 animate-scale-in">
-      <GlobalStyles />
-      <NavBar userProfile={userProfile} setView={setView} />
-      
-      <main className="pt-4 px-4 max-w-5xl mx-auto">
-        {view === 'home' && (
-           userProfile.role === 'student' ? (
-             <div className="space-y-8 animate-slide-up">
-               <header className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden"><div className="relative z-10"><h1 className="text-3xl font-bold mb-2">We run. You study.</h1><button onClick={() => setShowRequestForm(true)} className="bg-white text-blue-600 px-6 py-3 rounded-xl font-bold mt-4 btn-press flex items-center gap-2"><Plus size={20}/> Request Runner</button></div><div className="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl animate-blob"></div></header>
-               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{['Food','Print','Shop','Drop'].map((t) => <button key={t} onClick={() => setShowRequestForm(true)} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover-lift text-center font-bold text-gray-700 btn-press">{t}</button>)}</div>
-             </div>
-           ) : (
-             <Marketplace requests={requests} onClaim={async (id) => { await supabase.from('requests').update({ runner_id: user.id, status: 'accepted' }).eq('id', id); }} onUpdateStatus={async (id, s) => { await supabase.from('requests').update({ status: s }).eq('id', id); }} userId={user.id} onRefresh={fetchRequests} userProfile={userProfile} />
-           )
-        )}
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50 pb-24 font-sans text-gray-900 animate-scale-in">
+        <GlobalStyles />
+        <NavBar userProfile={userProfile} setView={setView} />
+        
+        <main className="pt-4 px-4 max-w-5xl mx-auto">
+          {view === 'home' && (
+             userProfile.role === 'student' ? (
+               <div className="space-y-8 animate-slide-up">
+                 <header className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden"><div className="relative z-10"><h1 className="text-3xl font-bold mb-2">We run. You study.</h1><button onClick={() => setShowRequestForm(true)} className="bg-white text-blue-600 px-6 py-3 rounded-xl font-bold mt-4 btn-press flex items-center gap-2"><Plus size={20}/> Request Runner</button></div><div className="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl animate-blob"></div></header>
+                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{['Food','Print','Shop','Drop'].map((t) => <button key={t} onClick={() => setShowRequestForm(true)} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover-lift text-center font-bold text-gray-700 btn-press">{t}</button>)}</div>
+               </div>
+             ) : (
+               <Marketplace requests={requests} onClaim={async (id) => { await supabase.from('requests').update({ runner_id: user.id, status: 'accepted' }).eq('id', id); }} onUpdateStatus={async (id, s) => { await supabase.from('requests').update({ status: s }).eq('id', id); }} userId={user.id} onRefresh={fetchRequests} userProfile={userProfile} />
+             )
+          )}
 
-        {view === 'tracker' && <RequestTracker requests={requests.filter(r => r.student_id === user.id)} currentUserId={user.id} onRate={(req, r) => { if (r > 0) { supabase.from('requests').update({ rating: r }).eq('id', req.id); } else setShowRatingModal(req); }} />}
-        {view === 'dashboard' && <div className="max-w-3xl mx-auto"><RunnerDashboard requests={requests} userId={user.id} /></div>}
-        {view === 'profile' && <ProfileView userProfile={userProfile} onEdit={() => setShowProfileModal(true)} onLogout={async () => { await supabase.auth.signOut(); setView('home'); }} />}
-      </main>
+          {view === 'tracker' && <RequestTracker requests={requests.filter(r => r.student_id === user.id)} currentUserId={user.id} onRate={(req, r) => { if (r > 0) { supabase.from('requests').update({ rating: r }).eq('id', req.id); } else setShowRatingModal(req); }} />}
+          {view === 'dashboard' && <div className="max-w-3xl mx-auto"><RunnerDashboard requests={requests} userId={user.id} /></div>}
+          {view === 'profile' && <ProfileView userProfile={userProfile} onEdit={() => setShowProfileModal(true)} onLogout={async () => { await supabase.auth.signOut(); setView('home'); }} />}
+        </main>
 
-      <BottomNav view={view} setView={setView} role={userProfile.role} />
+        <BottomNav view={view} setView={setView} role={userProfile.role} />
 
-      {showRequestForm && <RequestForm onSubmit={createRequest} onCancel={() => setShowRequestForm(false)} />}
-      {showRatingModal && <RatingModal onSubmit={async (r: number) => { await supabase.from('requests').update({ rating: r }).eq('id', showRatingModal.id); setShowRatingModal(null); }} />}
-      {showProfileModal && <ProfileModal userProfile={userProfile} onSave={async (d: any) => { await supabase.from('users').update(d).eq('id', user.id); setUserProfile({...userProfile, ...d}); }} onClose={() => setShowProfileModal(false)} />}
-      {activeChatRequest && <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 pop-in"><div className="w-full max-w-md bg-white rounded-xl overflow-hidden relative"><button className="absolute top-2 right-2 text-white z-10" onClick={()=>setActiveChatRequest(null)}><X/></button><ChatBox requestId={activeChatRequest} currentUserId={user.id} /></div></div>}
-    </div>
+        {showRequestForm && <RequestForm onSubmit={createRequest} onCancel={() => setShowRequestForm(false)} />}
+        {showRatingModal && <RatingModal onSubmit={async (r: number) => { await supabase.from('requests').update({ rating: r }).eq('id', showRatingModal.id); setShowRatingModal(null); }} />}
+        {showProfileModal && <ProfileModal userProfile={userProfile} onSave={async (d: any) => { await supabase.from('users').update(d).eq('id', user.id); setUserProfile({...userProfile, ...d}); }} onClose={() => setShowProfileModal(false)} />}
+        {activeChatRequest && <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 pop-in"><div className="w-full max-w-md bg-white rounded-xl overflow-hidden relative"><button className="absolute top-2 right-2 text-white z-10" onClick={()=>setActiveChatRequest(null)}><X/></button><ChatBox requestId={activeChatRequest} currentUserId={user.id} /></div></div>}
+      </div>
+    </ErrorBoundary>
   );
 }
