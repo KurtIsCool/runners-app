@@ -38,7 +38,7 @@ const AuthScreen = ({ onLogin, onSignup }: { onLogin: (e: string, p: string) => 
            <div className="absolute bottom-0 right-0 w-80 h-80 bg-blue-400/20 rounded-full blur-3xl animate-blob"></div>
 
            <div className="relative z-10 max-w-md">
-             <AppLogo dark={true} />
+             <AppLogo dark={true} className="h-32" />
              <h1 className="text-5xl font-black mt-8 mb-6 leading-tight">We run,<br/>you study.</h1>
              <p className="text-blue-100 text-lg mb-8">Join the student community that helps you focus on what matters most. Whether you need a delivery or want to earn extra cash, we've got you covered.</p>
 
@@ -63,7 +63,7 @@ const AuthScreen = ({ onLogin, onSignup }: { onLogin: (e: string, p: string) => 
 
            <div className="w-full max-w-md bg-white md:bg-transparent rounded-3xl shadow-2xl md:shadow-none p-8 z-10 animate-scale-in border md:border-0 border-gray-100">
               <div className="md:hidden text-center mb-8">
-                 <AppLogo />
+                 <AppLogo className="h-24" />
                  <h2 className="text-2xl font-bold mt-4 text-gray-800">Welcome Back!</h2>
               </div>
 

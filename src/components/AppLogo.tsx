@@ -1,9 +1,9 @@
-const AppLogo = ({ dark = false, className = "h-[200px]" }: { dark?: boolean, className?: string }) => (
-  <div className={`absolute top10 ${dark ? 'text-white' : 'text-blue-600'} ${className}`}  >
+const AppLogo = ({ dark = false, className = "h-10" }: { dark?: boolean, className?: string }) => (
+  <div className={`${dark ? 'text-white' : 'text-blue-600'} ${className} inline-flex items-center justify-center`}  >
     <svg
       viewBox="0 -76 760 560"
       xmlns="http://www.w3.org/2000/svg"
-      className="fill-current w-100 h-full"
+      className="fill-current w-auto h-full"
       style={{ display: 'block' }}
     >
       <g>
