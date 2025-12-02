@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Minimize2, QrCode, CheckCircle, ShoppingBag, Bike, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, User as UserIcon } from 'lucide-react';
+import { Minimize2, QrCode, CheckCircle, ShoppingBag, Bike, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle } from 'lucide-react';
 import { type Request, type UserProfile, type RequestStatus } from '../types';
 import ChatBox from './ChatBox';
 import { supabase } from '../lib/supabase';
