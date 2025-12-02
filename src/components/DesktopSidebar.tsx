@@ -12,7 +12,7 @@ interface DesktopSidebarProps {
 
 const DesktopSidebar = ({ view, setView, role, userProfile, onLogout }: DesktopSidebarProps) => {
     return (
-      <div className="hidden md:flex flex-col h-full desktop-sidebar p-6">
+      <div className="flex flex-col h-full desktop-sidebar p-6">
         {/* Kept sidebar logo large, as "30px" typically applies to header/context logos */}
         <div className="mb-10 pl-2"><AppLogo className="h-24" /></div>
 
