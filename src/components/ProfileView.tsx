@@ -66,6 +66,18 @@ const ProfileView = ({ userProfile, onEdit, onLogout }: { userProfile: UserProfi
                </div>
             </button>
          </div>
+
+          <div className="mt-6 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+             <div className="p-4 border-b border-gray-50 bg-gray-50/50"><h3 className="font-bold text-gray-900">More</h3></div>
+             <div className="divide-y divide-gray-50">
+                <button onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'about' }))} className="w-full text-left p-4 hover:bg-gray-50 flex justify-between items-center text-gray-600 text-sm font-medium">About Us <ChevronRight size={16} className="text-gray-300"/></button>
+                <button onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'contact' }))} className="w-full text-left p-4 hover:bg-gray-50 flex justify-between items-center text-gray-600 text-sm font-medium">Contact Support <ChevronRight size={16} className="text-gray-300"/></button>
+                <button onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'faqs' }))} className="w-full text-left p-4 hover:bg-gray-50 flex justify-between items-center text-gray-600 text-sm font-medium">FAQs <ChevronRight size={16} className="text-gray-300"/></button>
+                <button onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'terms' }))} className="w-full text-left p-4 hover:bg-gray-50 flex justify-between items-center text-gray-600 text-sm font-medium">Terms & Conditions <ChevronRight size={16} className="text-gray-300"/></button>
+                <button onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'privacy' }))} className="w-full text-left p-4 hover:bg-gray-50 flex justify-between items-center text-gray-600 text-sm font-medium">Privacy Policy <ChevronRight size={16} className="text-gray-300"/></button>
+                <button onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'help' }))} className="w-full text-left p-4 hover:bg-gray-50 flex justify-between items-center text-gray-600 text-sm font-medium">Help Center <ChevronRight size={16} className="text-gray-300"/></button>
+             </div>
+          </div>
       </div>
     );
 }

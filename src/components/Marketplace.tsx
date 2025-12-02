@@ -35,10 +35,16 @@ const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, use
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {openRequests.map((req, i) => (
-              <div key={req.id} style={{animationDelay: `${i*100}ms`}} className="stagger-enter bg-white rounded-2xl shadow-sm border border-gray-100 hover-lift transition-all duration-200 p-5 group">
+              <div key={req.id} style={{animationDelay: `${i*100}ms`}} className={`stagger-enter bg-white rounded-2xl shadow-sm border border-gray-100 hover-lift transition-all duration-200 p-5 group ${myActiveJob ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
                 <div className="flex items-start justify-between mb-4"><div className="flex items-center gap-3"><div className="bg-blue-50 p-3 rounded-xl text-2xl">{req.type === 'food' ? '🍔' : req.type === 'printing' ? '🖨️' : '📦'}</div><div><h3 className="font-bold text-lg text-gray-900 capitalize">{req.type}</h3><span className="text-xs text-gray-500">{new Date(req.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div></div><div className="font-bold text-xl text-green-600 mt-6">₱{req.price_estimate}</div></div>
                 <div className="space-y-2 mb-6 border-l-2 border-gray-100 pl-3"><div className="text-sm text-gray-600 truncate"><span className="font-bold text-xs uppercase text-gray-400 mr-2">From</span> {req.pickup_address}</div><div className="text-sm text-gray-600 truncate"><span className="font-bold text-xs uppercase text-gray-400 mr-2">To</span> {req.dropoff_address}</div></div>
-                <button onClick={() => onClaim(req.id)} className="w-full bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors flex justify-center items-center gap-2 btn-press">Accept Job <ArrowRight size={16}/></button>
+                <button
+                  onClick={() => !myActiveJob && onClaim(req.id)}
+                  disabled={!!myActiveJob}
+                  className="w-full bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors flex justify-center items-center gap-2 btn-press disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {myActiveJob ? 'Finish Active Job First' : 'Accept Job'} <ArrowRight size={16}/>
+                </button>
               </div>
             ))}
           </div>

@@ -10,10 +10,17 @@ const AuthScreen = ({ onLogin, onSignup }: { onLogin: (e: string, p: string) => 
     const [role, setRole] = useState<UserRole>('student');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [agreeTerms, setAgreeTerms] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setError('');
+
+      if (!isLogin && !agreeTerms) {
+        setError('You must agree to the Terms and Conditions.');
+        return;
+      }
+
       setLoading(true);
       try {
         if (isLogin) await onLogin(email, password);
@@ -38,8 +45,10 @@ const AuthScreen = ({ onLogin, onSignup }: { onLogin: (e: string, p: string) => 
            <div className="absolute bottom-0 right-0 w-80 h-80 bg-blue-400/20 rounded-full blur-3xl animate-blob"></div>
 
            <div className="relative z-10 max-w-md">
-             <AppLogo dark={true} />
-             <h1 className="text-5xl font-black mt-8 mb-6 leading-tight">We run,<br/>you study.</h1>
+             <div className="relative h-48 w-full mb-4">
+               <AppLogo dark={true} className="h-full w-auto" />
+             </div>
+             <h1 className="text-5xl font-black mb-6 leading-tight">We run,<br/>you study.</h1>
              <p className="text-blue-100 text-lg mb-8">Join the student community that helps you focus on what matters most. Whether you need a delivery or want to earn extra cash, we've got you covered.</p>
 
              <div className="flex gap-4">
@@ -63,8 +72,10 @@ const AuthScreen = ({ onLogin, onSignup }: { onLogin: (e: string, p: string) => 
 
            <div className="w-full max-w-md bg-white md:bg-transparent rounded-3xl shadow-2xl md:shadow-none p-8 z-10 animate-scale-in border md:border-0 border-gray-100">
               <div className="md:hidden text-center mb-8">
-                 <AppLogo />
-                 <h2 className="text-2xl font-bold mt-4 text-gray-800">Welcome Back!</h2>
+                 <div className="h-24 w-full flex justify-center mb-4">
+                   <AppLogo className="h-full w-auto" />
+                 </div>
+                 <h2 className="text-2xl font-bold text-gray-800">{isLogin ? 'Welcome Back!' : 'Create Account'}</h2>
               </div>
 
               <div className="hidden md:block mb-8">
@@ -123,20 +134,35 @@ const AuthScreen = ({ onLogin, onSignup }: { onLogin: (e: string, p: string) => 
 
                 {/* Enhanced Role Selection */}
                 {!isLogin && (
-                  <div className="grid grid-cols-2 gap-3 mt-2 animate-slide-up">
-                    <div
-                      onClick={() => setRole('student')}
-                      className={`cursor-pointer p-4 rounded-xl border-2 transition-all text-center ${role === 'student' ? 'border-blue-500 bg-blue-50' : 'border-gray-100 hover:border-gray-300'}`}
-                    >
-                      <BookOpen className={`mx-auto mb-2 ${role === 'student' ? 'text-blue-600' : 'text-gray-400'}`} size={24}/>
-                      <div className={`font-bold text-sm ${role === 'student' ? 'text-blue-700' : 'text-gray-600'}`}>Student</div>
+                  <div className="space-y-4 animate-slide-up">
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                      <div
+                        onClick={() => setRole('student')}
+                        className={`cursor-pointer p-4 rounded-xl border-2 transition-all text-center ${role === 'student' ? 'border-blue-500 bg-blue-50' : 'border-gray-100 hover:border-gray-300'}`}
+                      >
+                        <BookOpen className={`mx-auto mb-2 ${role === 'student' ? 'text-blue-600' : 'text-gray-400'}`} size={24}/>
+                        <div className={`font-bold text-sm ${role === 'student' ? 'text-blue-700' : 'text-gray-600'}`}>Student</div>
+                      </div>
+                      <div
+                        onClick={() => setRole('runner')}
+                        className={`cursor-pointer p-4 rounded-xl border-2 transition-all text-center ${role === 'runner' ? 'border-green-500 bg-green-50' : 'border-gray-100 hover:border-gray-300'}`}
+                      >
+                        <Bike className={`mx-auto mb-2 ${role === 'runner' ? 'text-green-600' : 'text-gray-400'}`} size={24}/>
+                        <div className={`font-bold text-sm ${role === 'runner' ? 'text-green-700' : 'text-gray-600'}`}>Runner</div>
+                      </div>
                     </div>
-                    <div
-                      onClick={() => setRole('runner')}
-                      className={`cursor-pointer p-4 rounded-xl border-2 transition-all text-center ${role === 'runner' ? 'border-green-500 bg-green-50' : 'border-gray-100 hover:border-gray-300'}`}
-                    >
-                      <Bike className={`mx-auto mb-2 ${role === 'runner' ? 'text-green-600' : 'text-gray-400'}`} size={24}/>
-                      <div className={`font-bold text-sm ${role === 'runner' ? 'text-green-700' : 'text-gray-600'}`}>Runner</div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="terms"
+                        checked={agreeTerms}
+                        onChange={(e) => setAgreeTerms(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                      />
+                      <label htmlFor="terms" className="text-sm text-gray-500">
+                        I agree to the <span className="text-blue-600 font-bold cursor-pointer">Terms and Conditions</span>
+                      </label>
                     </div>
                   </div>
                 )}

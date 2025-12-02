@@ -19,7 +19,12 @@ export default function MobileLayout({ children, view, setView, userProfile }: M
       {/* Mobile Navbar */}
       <nav className="bg-white/90 backdrop-blur-md border-b sticky top-0 z-40 shadow-sm">
         <div className="px-4 h-16 flex items-center justify-between">
-          {/* Profile on Left */}
+          {/* Logo on Left */}
+          <div onClick={() => setView('home')} className="cursor-pointer">
+            <AppLogo className="h-10" />
+          </div>
+
+          {/* Profile on Right */}
           <div
             onClick={() => setView('profile')}
             className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden cursor-pointer"
@@ -29,10 +34,6 @@ export default function MobileLayout({ children, view, setView, userProfile }: M
             ) : (
               <User className="p-1 text-gray-500" />
             )}
-          </div>
-          {/* Logo on Right */}
-          <div onClick={() => setView('home')} className="cursor-pointer">
-            <AppLogo className="h-10" />
           </div>
         </div>
       </nav>
