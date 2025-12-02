@@ -1,7 +1,21 @@
-import { useState } from 'react';
-import { RefreshCw, Navigation, ArrowRight, Bike, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { RefreshCw, Navigation, ArrowRight, Bike, ChevronRight, User as UserIcon } from 'lucide-react';
 import { type Request, type UserProfile, type RequestStatus } from '../types';
 import ActiveJobView from './ActiveJobView';
+import { supabase } from '../lib/supabase';
+
+// Sub-component for fetching student name in job card
+const JobRequester = ({ studentId }: { studentId: string }) => {
+    const [name, setName] = useState<string>('Student');
+    useEffect(() => {
+        const fetchName = async () => {
+            const { data } = await supabase.from('users').select('name').eq('id', studentId).single();
+            if (data) setName(data.name);
+        };
+        fetchName();
+    }, [studentId]);
+    return <div className="text-xs text-gray-500 flex items-center gap-1 mt-1"><UserIcon size={10} /> {name}</div>;
+}
 
 const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, userProfile }: { requests: Request[], onClaim: (id: string) => void, onUpdateStatus: (id: string, status: RequestStatus) => void, userId: string, onRefresh: () => void, userProfile: UserProfile }) => {
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -36,7 +50,17 @@ const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, use
           <div className="grid gap-4 md:grid-cols-2">
             {openRequests.map((req, i) => (
               <div key={req.id} style={{animationDelay: `${i*100}ms`}} className={`stagger-enter bg-white rounded-2xl shadow-sm border border-gray-100 hover-lift transition-all duration-200 p-5 group ${myActiveJob ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
-                <div className="flex items-start justify-between mb-4"><div className="flex items-center gap-3"><div className="bg-blue-50 p-3 rounded-xl text-2xl">{req.type === 'food' ? '🍔' : req.type === 'printing' ? '🖨️' : '📦'}</div><div><h3 className="font-bold text-lg text-gray-900 capitalize">{req.type}</h3><span className="text-xs text-gray-500">{new Date(req.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div></div><div className="font-bold text-xl text-green-600 mt-6">₱{req.price_estimate}</div></div>
+                <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-blue-50 p-3 rounded-xl text-2xl">{req.type === 'food' ? '🍔' : req.type === 'printing' ? '🖨️' : '📦'}</div>
+                        <div>
+                            <h3 className="font-bold text-lg text-gray-900 capitalize leading-none">{req.type}</h3>
+                            <JobRequester studentId={req.student_id} />
+                            <span className="text-xs text-gray-400 block mt-0.5">{new Date(req.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        </div>
+                    </div>
+                    <div className="font-bold text-xl text-green-600 mt-6">₱{req.price_estimate}</div>
+                </div>
                 <div className="space-y-2 mb-6 border-l-2 border-gray-100 pl-3"><div className="text-sm text-gray-600 truncate"><span className="font-bold text-xs uppercase text-gray-400 mr-2">From</span> {req.pickup_address}</div><div className="text-sm text-gray-600 truncate"><span className="font-bold text-xs uppercase text-gray-400 mr-2">To</span> {req.dropoff_address}</div></div>
                 <button
                   onClick={() => !myActiveJob && onClaim(req.id)}

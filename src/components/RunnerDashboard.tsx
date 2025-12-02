@@ -1,5 +1,19 @@
-import { Star, CheckCircle } from 'lucide-react';
+import { Star, CheckCircle, User as UserIcon } from 'lucide-react';
 import { type Request } from '../types';
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+
+const StudentInfo = ({ studentId }: { studentId: string }) => {
+    const [name, setName] = useState<string>('Student');
+    useEffect(() => {
+        const fetchName = async () => {
+            const { data } = await supabase.from('users').select('name').eq('id', studentId).single();
+            if (data) setName(data.name);
+        };
+        fetchName();
+    }, [studentId]);
+    return <span className="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-bold w-fit mt-1"><UserIcon size={10}/> {name}</span>;
+}
 
 const RunnerDashboard = ({ requests, userId }: { requests: Request[], userId: string }) => {
     const completed = requests.filter(r => r.runner_id === userId && r.status === 'completed');
@@ -31,7 +45,8 @@ const RunnerDashboard = ({ requests, userId }: { requests: Request[], userId: st
                          </div>
                          <div>
                             <h4 className="font-bold text-gray-900 capitalize">{job.type} Delivery</h4>
-                            <p className="text-xs text-gray-500">{new Date(job.created_at).toLocaleDateString()} • {new Date(job.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                            <p className="text-xs text-gray-500 mb-1">{new Date(job.created_at).toLocaleDateString()} • {new Date(job.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                            <StudentInfo studentId={job.student_id} />
                          </div>
                       </div>
                       <span className="font-black text-green-600 bg-green-50 px-3 py-1 rounded-lg text-sm">+₱{job.price_estimate}</span>
