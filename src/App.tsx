@@ -193,6 +193,7 @@ export default function App() {
         >
           <AppContent
             view={view}
+            setView={setView}
             userProfile={userProfile}
             requests={requests}
             setShowRequestForm={setShowRequestForm}
@@ -200,6 +201,7 @@ export default function App() {
             setShowProfileModal={setShowProfileModal}
             onLogout={async () => { await supabase.auth.signOut(); setView('home'); }}
             fetchRequests={fetchRequests}
+            createRequest={createRequest}
             updateRequestStatus={updateRequestStatus}
             assignRequest={assignRequest}
             rateRequest={rateRequest}

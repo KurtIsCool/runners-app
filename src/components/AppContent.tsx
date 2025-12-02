@@ -7,13 +7,16 @@ import { type UserProfile, type Request } from '../types';
 
 interface AppContentProps {
   view: string;
+  setView: (view: string) => void;
   userProfile: UserProfile | null;
   requests: Request[];
+  loading?: boolean;
   setShowRequestForm: (show: boolean) => void;
   setShowRatingModal: (request: Request | null) => void;
   setShowProfileModal: (show: boolean) => void;
   onLogout: () => void;
   fetchRequests: () => void;
+  createRequest?: (data: any) => Promise<void>;
   updateRequestStatus: (id: string, status: string) => Promise<void>;
   assignRequest: (id: string, runnerId: string) => Promise<void>;
   rateRequest: (id: string, rating: number) => Promise<void>;
@@ -22,6 +25,7 @@ interface AppContentProps {
 
 export default function AppContent({
   view,
+  // setView,
   userProfile,
   requests,
   setShowRequestForm,
