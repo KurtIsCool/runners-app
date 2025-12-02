@@ -14,7 +14,9 @@ const DesktopSidebar = ({ view, setView, role, userProfile, onLogout }: DesktopS
     return (
       <div className="flex flex-col h-full desktop-sidebar p-6">
         {/* Kept sidebar logo large, as "30px" typically applies to header/context logos */}
-        <div className="mb-10 pl-2"><AppLogo className="h-24" /></div>
+        <div className="mb-10 pl-2 cursor-pointer" onClick={() => setView('home')}>
+          <AppLogo className="h-24" />
+        </div>
 
         <div className="space-y-2 flex-1">
           <button onClick={() => setView('home')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${view === 'home' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
