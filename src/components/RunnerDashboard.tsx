@@ -15,7 +15,51 @@ const RunnerDashboard = ({ requests, userId }: { requests: Request[], userId: st
         </div>
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden stagger-enter" style={{animationDelay: '0.1s'}}>
           <div className="p-6 border-b border-gray-50 flex justify-between items-center"><h3 className="font-bold text-gray-800 text-lg">Work History</h3><span className="text-xs font-medium text-gray-400">{completed.length} Jobs</span></div>
-          {completed.length === 0 ? <div className="p-12 text-center text-gray-500"><div className="bg-gray-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><CheckCircle className="text-gray-300" /></div>No completed tasks yet.</div> : <div className="divide-y divide-gray-50">{completed.map((job, i) => (<div key={job.id} style={{animationDelay: `${i*50}ms`}} className="stagger-enter p-5 flex justify-between items-center hover:bg-gray-50 transition"><div><div className="flex items-center gap-2 mb-1"><p className="font-bold text-gray-900 capitalize">{job.type}</p>{job.rating && <span className="flex items-center text-[10px] bg-yellow-50 text-yellow-700 px-1.5 rounded font-bold border border-yellow-100">{job.rating} <Star size={8} className="ml-0.5 fill-yellow-500 text-yellow-500"/></span>}</div><p className="text-xs text-gray-500">{new Date(job.created_at).toLocaleDateString()}</p></div><span className="font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg text-sm">+₱{job.price_estimate}</span></div>))}</div>}
+          {completed.length === 0 ? (
+            <div className="p-12 text-center text-gray-500">
+              <div className="bg-gray-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><CheckCircle className="text-gray-300" /></div>
+              No completed tasks yet.
+            </div>
+          ) : (
+            <div className="p-4 space-y-3 bg-gray-50/50">
+              {completed.map((job, i) => (
+                <div key={job.id} style={{animationDelay: `${i*50}ms`}} className="stagger-enter bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group">
+                   <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                         <div className={`p-2.5 rounded-xl ${job.type === 'food' ? 'bg-orange-100 text-orange-600' : job.type === 'printing' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+                           {job.type === 'food' ? '🍔' : job.type === 'printing' ? '🖨️' : '📦'}
+                         </div>
+                         <div>
+                            <h4 className="font-bold text-gray-900 capitalize">{job.type} Delivery</h4>
+                            <p className="text-xs text-gray-500">{new Date(job.created_at).toLocaleDateString()} • {new Date(job.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                         </div>
+                      </div>
+                      <span className="font-black text-green-600 bg-green-50 px-3 py-1 rounded-lg text-sm">+₱{job.price_estimate}</span>
+                   </div>
+
+                   <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                      <div className="flex items-center gap-2">
+                        <div className={`h-2 w-2 rounded-full ${job.status === 'completed' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">{job.status}</span>
+                      </div>
+
+                      {job.rating ? (
+                        <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100">
+                          <span className="font-bold text-yellow-700 text-xs">{job.rating}.0</span>
+                          <div className="flex">
+                            {[...Array(5)].map((_, i) => (
+                              <Star key={i} size={10} className={`${i < (job.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                         <span className="text-xs text-gray-400 italic">No rating</span>
+                      )}
+                   </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );

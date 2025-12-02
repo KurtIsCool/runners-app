@@ -51,7 +51,7 @@ const ProfileModal = ({ userProfile, onSave, onClose }: ProfileModalProps) => {
                   <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'avatar')} />
                </label>
                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer hover:bg-gray-100 p-2 rounded transition">
-                  {uploading ? <Loader2 size={14} className="animate-spin"/> : <Camera size={14}/>} Upload School ID
+                  {uploading ? <Loader2 size={14} className="animate-spin"/> : <Camera size={14}/>} Upload Government/School ID
                   <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'id')} />
                </label>
                {userProfile.role === 'runner' && (

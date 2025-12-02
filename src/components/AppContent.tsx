@@ -3,7 +3,9 @@ import Marketplace from './Marketplace';
 import RequestTracker from './RequestTracker';
 import RunnerDashboard from './RunnerDashboard';
 import ProfileView from './ProfileView';
+import StaticPage from './StaticPages';
 import { type UserProfile, type Request } from '../types';
+import { useEffect } from 'react';
 
 interface AppContentProps {
   view: string;
@@ -25,7 +27,7 @@ interface AppContentProps {
 
 export default function AppContent({
   view,
-  // setView,
+  setView,
   userProfile,
   requests,
   setShowRequestForm,
@@ -111,6 +113,15 @@ export default function AppContent({
     );
   }
 
+  useEffect(() => {
+    const handleNavigation = (e: Event) => {
+       const detail = (e as CustomEvent).detail;
+       if (detail) setView(detail);
+    };
+    window.addEventListener('navigate', handleNavigation);
+    return () => window.removeEventListener('navigate', handleNavigation);
+  }, [setView]);
+
   if (view === 'profile') {
     return (
       <ProfileView
@@ -119,6 +130,10 @@ export default function AppContent({
         onLogout={onLogout}
       />
     );
+  }
+
+  if (['about', 'contact', 'faqs', 'terms', 'privacy', 'help'].includes(view)) {
+    return <StaticPage page={view} onBack={() => setView('profile')} />;
   }
 
   return null;
