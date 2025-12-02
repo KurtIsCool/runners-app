@@ -8,6 +8,7 @@ import { type RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 const ChatBox = ({ requestId, currentUserId, embedded = false }: { requestId: string, currentUserId: string, embedded?: boolean }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
+    const [chatTitle, setChatTitle] = useState('Chat');
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -16,7 +17,22 @@ const ChatBox = ({ requestId, currentUserId, embedded = false }: { requestId: st
         const { data } = await supabase.from('messages').select('*').eq('request_id', requestId).order('created_at', { ascending: true });
         if (data) setMessages(data);
       };
+
+      const fetchChatDetails = async () => {
+          // Fetch request details to identify the other party
+          const { data: request } = await supabase.from('requests').select('student_id, runner_id').eq('id', requestId).single();
+          if (request) {
+              const otherUserId = request.student_id === currentUserId ? request.runner_id : request.student_id;
+              if (otherUserId) {
+                  const { data: user } = await supabase.from('users').select('name').eq('id', otherUserId).single();
+                  if (user) setChatTitle(`Chat with ${user.name}`);
+              }
+          }
+      };
+
       fetchMessages();
+      if (!embedded) fetchChatDetails();
+
       const channel = supabase.channel(`chat:${requestId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `request_id=eq.${requestId}` }, (payload: RealtimePostgresInsertPayload<Message>) => {
           setMessages(prev => {
               if (prev.find(m => m.id === payload.new.id)) return prev;
@@ -25,7 +41,7 @@ const ChatBox = ({ requestId, currentUserId, embedded = false }: { requestId: st
           if (payload.new.sender_id !== currentUserId) sendNotification("New Message", payload.new.text);
         }).subscribe();
       return () => { supabase.removeChannel(channel); };
-    }, [requestId, currentUserId]);
+    }, [requestId, currentUserId, embedded]);
 
     useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -39,7 +55,7 @@ const ChatBox = ({ requestId, currentUserId, embedded = false }: { requestId: st
 
     return (
       <div className={`flex flex-col ${embedded ? 'h-full' : 'h-[500px]'} bg-gray-50`}>
-        {!embedded && <div className="bg-blue-600 p-4 text-white font-bold flex items-center gap-2 shadow-md"><MessageCircle size={20} /> Chat</div>}
+        {!embedded && <div className="bg-blue-600 p-4 text-white font-bold flex items-center gap-2 shadow-md"><MessageCircle size={20} /> {chatTitle}</div>}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {messages.length === 0 && <div className="text-center text-gray-400 mt-4 text-sm pop-in">Send a message to coordinate...</div>}
           {messages.map((msg) => {
