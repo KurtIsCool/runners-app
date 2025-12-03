@@ -1,5 +1,4 @@
 import { Plus } from 'lucide-react';
-import AppLogo from './AppLogo';
 import Marketplace from './Marketplace';
 import RequestTracker from './RequestTracker';
 import RunnerDashboard from './RunnerDashboard';
@@ -73,9 +72,6 @@ export default function AppContent({
               </button>
             </div>
             <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-blob"></div>
-            <div className="absolute right-10 top-10 text-white/10 hidden md:block">
-              <AppLogo className="h-44 w-44" />
-            </div>
           </header>
 
           {/* Category Buttons */}
