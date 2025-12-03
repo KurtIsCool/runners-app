@@ -43,6 +43,13 @@ const ProfileModal = ({ userProfile, onSave, onClose, readOnly = false }: Profil
       }
     };
 
+    // Determine stats labels based on role
+    const isStudent = userProfile.role === 'student';
+    // Use role specific rating if available, else overall
+    const ratingValue = isStudent ? userProfile.student_rating : (userProfile.runner_rating || userProfile.rating);
+    const historyLabel = isStudent ? "Requests Made" : "Tasks Completed";
+    const historyIcon = isStudent ? Package : Bike;
+
     return (
       <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm pop-in">
         <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">

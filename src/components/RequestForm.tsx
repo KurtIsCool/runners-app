@@ -153,7 +153,7 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
               </div>
             </div>
 
-            <button type="submit" disabled={loading} className="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl hover:bg-black transition-all btn-press shadow-xl flex justify-center items-center gap-2 text-sm">
+            <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-all btn-press shadow-xl shadow-blue-200 flex justify-center items-center gap-2 text-sm">
               {loading ? <Loader2 className="animate-spin" size={18} /> : 'Post Request'}
             </button>
           </form>
