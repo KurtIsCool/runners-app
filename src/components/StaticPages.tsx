@@ -1,4 +1,4 @@
-import { ArrowLeft, Mail, FileText, HelpCircle, Shield, Info } from 'lucide-react';
+import { ArrowLeft, Mail, FileText, HelpCircle, Shield, Info, type LucideIcon } from 'lucide-react';
 
 interface StaticPageProps {
   page: string;
@@ -6,7 +6,7 @@ interface StaticPageProps {
 }
 
 const StaticPage = ({ page, onBack }: StaticPageProps) => {
-  const content: Record<string, { title: string; icon: any; body: any }> = {
+  const content: Record<string, { title: string; icon: LucideIcon; body: React.ReactNode }> = {
     about: {
       title: 'About Us',
       icon: Info,
@@ -85,6 +85,7 @@ const StaticPage = ({ page, onBack }: StaticPageProps) => {
         </div>
       ),
     },
+    // We add a default case to handle potential missing pages safely
   };
 
   const pageData = content[page];

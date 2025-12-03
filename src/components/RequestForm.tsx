@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Loader2, X, MapPin, Navigation } from 'lucide-react';
+import { Loader2, X, MapPin, Navigation, Map } from 'lucide-react';
+import MapPicker from './MapPicker';
+import { reverseGeocode } from '../lib/geocoding';
 
 // Define the type for the form data
 interface RequestFormData {
@@ -7,25 +9,76 @@ interface RequestFormData {
     pickup_address: string;
     dropoff_address: string;
     details: string;
-    price_estimate: number;
-    lat: number;
-    lng: number;
+    // New: Item Cost
+    item_cost: number;
+    price_estimate: number; // Runner Fee (Fixed 49)
+    // Coords
+    pickup_lat: number;
+    pickup_lng: number;
+    dropoff_lat: number;
+    dropoff_lng: number;
 }
 
 interface RequestFormProps {
-    onSubmit: (data: RequestFormData) => Promise<void>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onSubmit: (data: any) => Promise<void>;
     onCancel: () => void;
 }
 
+type LocationMode = 'pickup' | 'dropoff' | null;
+
 const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState<RequestFormData>({ type: 'food', pickup_address: '', dropoff_address: '', details: '', price_estimate: 50, lat: 0, lng: 0 });
-    const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); setLoading(true); await onSubmit(formData); setLoading(false); };
+    const [formData, setFormData] = useState<RequestFormData>({
+      type: 'food',
+      pickup_address: '',
+      dropoff_address: '',
+      details: '',
+      item_cost: 0,
+      price_estimate: 49, // Fixed Runner Fee
+      pickup_lat: 0,
+      pickup_lng: 0,
+      dropoff_lat: 0,
+      dropoff_lng: 0
+    });
+
+    const [locationMode, setLocationMode] = useState<LocationMode>(null);
+    const [addressLoading, setAddressLoading] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setLoading(true);
+      await onSubmit({
+        ...formData,
+        // Map to legacy fields if needed
+        lat: formData.pickup_lat,
+        lng: formData.pickup_lng
+      });
+      setLoading(false);
+    };
+
+    const handleLocationSelect = async (lat: number, lng: number) => {
+      let addressUpdate = {};
+
+      setAddressLoading(true);
+      const address = await reverseGeocode(lat, lng);
+      setAddressLoading(false);
+
+      if (locationMode === 'pickup') {
+        addressUpdate = { pickup_lat: lat, pickup_lng: lng };
+        if (address) addressUpdate = { ...addressUpdate, pickup_address: address };
+      } else if (locationMode === 'dropoff') {
+        addressUpdate = { dropoff_lat: lat, dropoff_lng: lng };
+        if (address) addressUpdate = { ...addressUpdate, dropoff_address: address };
+      }
+
+      setFormData(prev => ({ ...prev, ...addressUpdate }));
+    };
 
     return (
       <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm pop-in">
-        <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl scale-100 transition-all">
-          <div className="bg-white border-b border-gray-100 px-5 py-4 flex justify-between items-center">
+        <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl scale-100 transition-all max-h-[90vh] overflow-y-auto no-scrollbar">
+          <div className="bg-white border-b border-gray-100 px-5 py-4 flex justify-between items-center sticky top-0 z-10">
             <div><h3 className="font-bold text-lg text-gray-900">Create Request</h3><p className="text-gray-500 text-xs mt-0.5">What do you need help with?</p></div>
             <button onClick={onCancel} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition-all hover:rotate-90 text-gray-600"><X size={18}/></button>
           </div>
@@ -55,17 +108,51 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
 
             <div className="space-y-3">
               <div className="bg-gray-50 px-3 py-2.5 rounded-xl border border-gray-100 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all">
-                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-gray-400 mb-1">
-                  <MapPin size={12} className="text-red-500" /> Pickup
-                </label>
-                <input required type="text" placeholder="e.g. Jollibee, Library" className="w-full bg-transparent text-sm font-medium text-gray-900 placeholder-gray-400 outline-none" value={formData.pickup_address} onChange={(e) => setFormData({...formData, pickup_address: e.target.value})}/>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-gray-400">
+                    <MapPin size={12} className="text-red-500" /> Pickup Location
+                  </label>
+                  <button type="button" onClick={() => setLocationMode(locationMode === 'pickup' ? null : 'pickup')} className="text-[10px] flex items-center gap-1 text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-lg hover:bg-blue-100">
+                    <Map size={10} /> {locationMode === 'pickup' ? 'Hide Map' : 'Set on Map'}
+                  </button>
+                </div>
+                {locationMode === 'pickup' && (
+                   <div className="mb-2">
+                      <MapPicker
+                        initialLat={formData.pickup_lat || undefined}
+                        initialLng={formData.pickup_lng || undefined}
+                        onLocationSelect={handleLocationSelect}
+                      />
+                   </div>
+                )}
+                <div className="relative">
+                    <input required type="text" placeholder="e.g. Jollibee, Library" className="w-full bg-transparent text-sm font-medium text-gray-900 placeholder-gray-400 outline-none" value={formData.pickup_address} onChange={(e) => setFormData({...formData, pickup_address: e.target.value})}/>
+                    {addressLoading && locationMode === 'pickup' && <Loader2 size={14} className="animate-spin absolute right-0 top-1 text-blue-500"/>}
+                </div>
               </div>
 
               <div className="bg-gray-50 px-3 py-2.5 rounded-xl border border-gray-100 focus-within:border-green-400 focus-within:ring-2 focus-within:ring-green-500/10 transition-all">
-                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-gray-400 mb-1">
-                  <Navigation size={12} className="text-green-500" /> Dropoff
-                </label>
-                <input required type="text" placeholder="e.g. Dorm Room 305" className="w-full bg-transparent text-sm font-medium text-gray-900 placeholder-gray-400 outline-none" value={formData.dropoff_address} onChange={(e) => setFormData({...formData, dropoff_address: e.target.value})}/>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-gray-400">
+                    <Navigation size={12} className="text-green-500" /> Dropoff Location
+                  </label>
+                  <button type="button" onClick={() => setLocationMode(locationMode === 'dropoff' ? null : 'dropoff')} className="text-[10px] flex items-center gap-1 text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-lg hover:bg-green-100">
+                    <Map size={10} /> {locationMode === 'dropoff' ? 'Hide Map' : 'Set on Map'}
+                  </button>
+                </div>
+                 {locationMode === 'dropoff' && (
+                   <div className="mb-2">
+                      <MapPicker
+                         initialLat={formData.dropoff_lat || undefined}
+                         initialLng={formData.dropoff_lng || undefined}
+                         onLocationSelect={handleLocationSelect}
+                      />
+                   </div>
+                )}
+                <div className="relative">
+                    <input required type="text" placeholder="e.g. Dorm Room 305" className="w-full bg-transparent text-sm font-medium text-gray-900 placeholder-gray-400 outline-none" value={formData.dropoff_address} onChange={(e) => setFormData({...formData, dropoff_address: e.target.value})}/>
+                    {addressLoading && locationMode === 'dropoff' && <Loader2 size={14} className="animate-spin absolute right-0 top-1 text-green-500"/>}
+                </div>
               </div>
             </div>
 
@@ -74,18 +161,37 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
               <textarea required rows={2} placeholder="Add details (e.g. 'No pickles')..." className="w-full px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium text-gray-700 resize-none" value={formData.details} onChange={(e) => setFormData({...formData, details: e.target.value})}/>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-4 rounded-xl flex items-center justify-between shadow-lg shadow-blue-600/20 text-white">
-              <div>
-                <span className="block text-xs font-bold text-blue-100">Total Offer</span>
-                <span className="text-[10px] text-blue-200">Fee & item cost</span>
-              </div>
-              <div className="flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-lg backdrop-blur-md border border-white/20">
-                <span className="text-blue-100 font-bold text-sm">₱</span>
-                <input type="number" className="w-16 bg-transparent text-right font-black text-xl text-white outline-none placeholder-blue-300/50" value={formData.price_estimate} onChange={(e) => setFormData({...formData, price_estimate: Number(e.target.value)})}/>
-              </div>
+            <div className="space-y-2">
+               {/* Item Cost Input */}
+               <div className="bg-white border border-gray-200 p-3 rounded-xl flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-500">Estimated Item Cost</label>
+                  <div className="flex items-center gap-1">
+                     <span className="text-gray-400 text-sm">₱</span>
+                     <input type="number" min="0" placeholder="0" className="w-16 text-right font-bold text-lg outline-none" value={formData.item_cost || ''} onChange={(e) => setFormData({...formData, item_cost: Number(e.target.value)})}/>
+                  </div>
+               </div>
+
+               {/* Summary Card */}
+               <div className="bg-gradient-to-br from-gray-900 to-black p-4 rounded-xl text-white shadow-xl">
+                  <div className="flex justify-between items-center mb-1 text-xs text-gray-400">
+                     <span>Runner Fee (Fixed)</span>
+                     <span>₱{formData.price_estimate}</span>
+                  </div>
+                   <div className="flex justify-between items-center mb-3 text-xs text-gray-400 border-b border-gray-700 pb-2">
+                     <span>Est. Item Cost</span>
+                     <span>₱{formData.item_cost || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                     <div>
+                       <span className="block text-xs font-bold text-gray-300">Total Estimate</span>
+                       <span className="text-[10px] text-gray-500">Prepare this amount</span>
+                     </div>
+                     <span className="text-2xl font-black text-white">₱{(formData.price_estimate + (formData.item_cost || 0))}</span>
+                  </div>
+               </div>
             </div>
 
-            <button type="submit" disabled={loading} className="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl hover:bg-black transition-all btn-press shadow-xl flex justify-center items-center gap-2 text-sm">
+            <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-all btn-press shadow-xl shadow-blue-200 flex justify-center items-center gap-2 text-sm">
               {loading ? <Loader2 className="animate-spin" size={18} /> : 'Post Request'}
             </button>
           </form>

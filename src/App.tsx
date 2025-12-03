@@ -52,6 +52,8 @@ export default function App() {
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState<Request | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showPublicProfileId, setShowPublicProfileId] = useState<string | null>(null); // New state for public profile
+  const [publicProfile, setPublicProfile] = useState<UserProfile | null>(null); // New state for public profile data
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeChatRequest, setActiveChatRequest] = useState<string|null>(null);
@@ -96,6 +98,19 @@ export default function App() {
     };
     if (user) fetchProfile();
   }, [user, view]);
+
+  // Fetch Public Profile when showPublicProfileId changes
+  useEffect(() => {
+    const fetchPublicProfile = async () => {
+        if (!showPublicProfileId) {
+            setPublicProfile(null);
+            return;
+        }
+        const { data } = await supabase.from('users').select('*').eq('id', showPublicProfileId).single();
+        if (data) setPublicProfile(data);
+    };
+    fetchPublicProfile();
+  }, [showPublicProfileId]);
 
   const fetchRequests = useCallback(async () => {
      const { data } = await supabase.from('requests').select('*').order('created_at', { ascending: false });
@@ -165,8 +180,24 @@ export default function App() {
     await supabase.from('requests').update({ runner_id: runnerId, status: 'accepted' }).eq('id', id);
   };
 
-  const rateRequest = async (id: string, rating: number) => {
-    await supabase.from('requests').update({ rating }).eq('id', id);
+  const rateRequest = async (id: string, rating: number, comment?: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: any = { rating };
+    // Determine if user is student or runner to know which column to update (simplification: assume caller knows, or infer)
+    // Actually, RequestTracker calls this. If user is student, they rate runner.
+    // We should probably explicitly update `runner_rating` and `student_comment` (if user is student).
+    // But since the legacy `rating` field exists, we update that too for compatibility.
+
+    // Check role of current user
+    if (userProfile?.role === 'student') {
+        updateData.runner_rating = rating;
+        if (comment) updateData.student_comment = comment; // Comment BY student
+    } else {
+        updateData.student_rating = rating;
+        if (comment) updateData.runner_comment = comment; // Comment BY runner
+    }
+
+    await supabase.from('requests').update(updateData).eq('id', id);
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
@@ -199,6 +230,7 @@ export default function App() {
             setShowRequestForm={setShowRequestForm}
             setShowRatingModal={setShowRatingModal}
             setShowProfileModal={setShowProfileModal}
+            setShowPublicProfileModal={setShowPublicProfileId}
             onLogout={async () => { await supabase.auth.signOut(); setView('home'); }}
             fetchRequests={fetchRequests}
             createRequest={createRequest}
@@ -211,8 +243,26 @@ export default function App() {
 
         {/* Modals & Overlays - Global */}
         {showRequestForm && <RequestForm onSubmit={createRequest} onCancel={() => setShowRequestForm(false)} />}
-        {showRatingModal && <RatingModal onSubmit={async (r: number) => { await rateRequest(showRatingModal.id, r); setShowRatingModal(null); }} />}
+        {showRatingModal && <RatingModal onSubmit={async (r: number, c?: string) => { await rateRequest(showRatingModal.id, r, c); setShowRatingModal(null); }} onClose={() => setShowRatingModal(null)} />}
+
+        {/* Own Profile Modal (Editable) */}
         {showProfileModal && userProfile && <ProfileModal userProfile={userProfile} onSave={async (d: Partial<UserProfile>) => { await supabase.from('users').update(d).eq('id', user.id); setUserProfile({...userProfile, ...d}); }} onClose={() => setShowProfileModal(false)} />}
+
+        {/* Public Profile Modal (Read-Only) */}
+        {showPublicProfileId && publicProfile && (
+            <div className="fixed inset-0 z-[65] bg-black/50 flex items-center justify-center p-4">
+                 <div className="relative w-full max-w-md pointer-events-auto">
+                    {/* Close handler needs to be on wrapper or explicitly handled if we reuse ProfileModal */}
+                    <ProfileModal
+                        userProfile={publicProfile}
+                        onSave={() => {}} // No-op
+                        onClose={() => setShowPublicProfileId(null)}
+                        readOnly={true}
+                    />
+                 </div>
+            </div>
+        )}
+
         {activeChatRequest && <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 pop-in"><div className="w-full max-w-md bg-white rounded-xl overflow-hidden relative"><button className="absolute top-2 right-2 text-white z-10" onClick={()=>setActiveChatRequest(null)}><X/></button><ChatBox requestId={activeChatRequest} currentUserId={user.id} /></div></div>}
       </div>
     </ErrorBoundary>

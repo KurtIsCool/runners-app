@@ -3,7 +3,7 @@ import { type Request } from '../types';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-const StudentInfo = ({ studentId }: { studentId: string }) => {
+const StudentInfo = ({ studentId, onClick }: { studentId: string, onClick?: (id: string) => void }) => {
     const [name, setName] = useState<string>('Student');
     useEffect(() => {
         const fetchName = async () => {
@@ -12,14 +12,22 @@ const StudentInfo = ({ studentId }: { studentId: string }) => {
         };
         fetchName();
     }, [studentId]);
-    return <span className="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-bold w-fit mt-1"><UserIcon size={10}/> {name}</span>;
+    return (
+        <button
+            onClick={() => onClick && onClick(studentId)}
+            className="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-bold w-fit mt-1 hover:bg-gray-200 transition-colors"
+        >
+            <UserIcon size={10}/> {name}
+        </button>
+    );
 }
 
-const RunnerDashboard = ({ requests, userId }: { requests: Request[], userId: string }) => {
+const RunnerDashboard = ({ requests, userId, onViewProfile }: { requests: Request[], userId: string, onViewProfile?: (userId: string) => void }) => {
     const completed = requests.filter(r => r.runner_id === userId && r.status === 'completed');
     const earnings = completed.reduce((sum, r) => sum + (r.price_estimate || 0), 0);
-    const ratedJobs = completed.filter(r => r.rating);
-    const avgRating = ratedJobs.length > 0 ? (ratedJobs.reduce((sum, r) => sum + (r.rating || 0), 0) / ratedJobs.length).toFixed(1) : 'New';
+    // Use runner_rating if available, fallback to legacy rating
+    const ratedJobs = completed.filter(r => r.runner_rating || r.rating);
+    const avgRating = ratedJobs.length > 0 ? (ratedJobs.reduce((sum, r) => sum + (r.runner_rating || r.rating || 0), 0) / ratedJobs.length).toFixed(1) : 'New';
 
     return (
       <div className="space-y-6 pb-24 animate-slide-up">
@@ -46,7 +54,7 @@ const RunnerDashboard = ({ requests, userId }: { requests: Request[], userId: st
                          <div>
                             <h4 className="font-bold text-gray-900 capitalize">{job.type} Delivery</h4>
                             <p className="text-xs text-gray-500 mb-1">{new Date(job.created_at).toLocaleDateString()} • {new Date(job.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                            <StudentInfo studentId={job.student_id} />
+                            <StudentInfo studentId={job.student_id} onClick={onViewProfile} />
                          </div>
                       </div>
                       <span className="font-black text-green-600 bg-green-50 px-3 py-1 rounded-lg text-sm">+₱{job.price_estimate}</span>
@@ -58,12 +66,12 @@ const RunnerDashboard = ({ requests, userId }: { requests: Request[], userId: st
                         <span className="text-xs font-bold uppercase tracking-wider text-gray-500">{job.status}</span>
                       </div>
 
-                      {job.rating ? (
+                      {(job.runner_rating || job.rating) ? (
                         <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100">
-                          <span className="font-bold text-yellow-700 text-xs">{job.rating}.0</span>
+                          <span className="font-bold text-yellow-700 text-xs">{(job.runner_rating || job.rating)}.0</span>
                           <div className="flex">
                             {[...Array(5)].map((_, i) => (
-                              <Star key={i} size={10} className={`${i < (job.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                              <Star key={i} size={10} className={`${i < (job.runner_rating || job.rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
                             ))}
                           </div>
                         </div>
@@ -71,6 +79,13 @@ const RunnerDashboard = ({ requests, userId }: { requests: Request[], userId: st
                          <span className="text-xs text-gray-400 italic">No rating</span>
                       )}
                    </div>
+                   {/* Show Proof thumbnail if exists */}
+                   {job.proof_url && (
+                     <div className="mt-2 pt-2 border-t border-gray-50">
+                       <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Proof of Delivery</p>
+                       <img src={job.proof_url} alt="Proof" className="h-12 w-12 rounded object-cover border border-gray-200" />
+                     </div>
+                   )}
                 </div>
               ))}
             </div>
