@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, ImageIcon, Camera, QrCode, Star, History } from 'lucide-react';
+import { Loader2, ImageIcon, Camera, QrCode, Star, Package, Bike } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { type UserProfile } from '../types';
 
@@ -48,7 +48,7 @@ const ProfileModal = ({ userProfile, onSave, onClose, readOnly = false }: Profil
     // Use role specific rating if available, else overall
     const ratingValue = isStudent ? userProfile.student_rating : (userProfile.runner_rating || userProfile.rating);
     const historyLabel = isStudent ? "Requests Made" : "Tasks Completed";
-    const historyIcon = isStudent ? Package : Bike;
+    const HistoryIcon = isStudent ? Package : Bike;
 
     return (
       <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm pop-in">
@@ -107,14 +107,14 @@ const ProfileModal = ({ userProfile, onSave, onClose, readOnly = false }: Profil
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100 text-center">
                             <div className="flex justify-center mb-2"><Star className="fill-yellow-400 text-yellow-400" size={24}/></div>
-                            <div className="text-2xl font-black text-gray-900">{userProfile.rating?.toFixed(1) || 'N/A'}</div>
+                            <div className="text-2xl font-black text-gray-900">{ratingValue?.toFixed(1) || 'N/A'}</div>
                             <div className="text-xs font-bold text-yellow-700 uppercase tracking-wide">Rating</div>
                             <div className="text-[10px] text-gray-400 mt-1">{userProfile.total_reviews || 0} reviews</div>
                         </div>
                         <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 text-center">
-                             <div className="flex justify-center mb-2"><History className="text-blue-500" size={24}/></div>
+                             <div className="flex justify-center mb-2"><HistoryIcon className="text-blue-500" size={24}/></div>
                              <div className="text-2xl font-black text-gray-900">{userProfile.history?.length || 0}</div>
-                             <div className="text-xs font-bold text-blue-700 uppercase tracking-wide">Tasks Completed</div>
+                             <div className="text-xs font-bold text-blue-700 uppercase tracking-wide">{historyLabel}</div>
                         </div>
                     </div>
 
