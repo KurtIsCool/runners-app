@@ -5,7 +5,7 @@ import ActiveJobView from './ActiveJobView';
 import { supabase } from '../lib/supabase';
 
 // Sub-component for fetching student name in job card
-const JobRequester = ({ studentId }: { studentId: string }) => {
+const JobRequester = ({ studentId, onClick }: { studentId: string, onClick?: (id: string) => void }) => {
     const [name, setName] = useState<string>('Student');
     useEffect(() => {
         const fetchName = async () => {
@@ -14,10 +14,17 @@ const JobRequester = ({ studentId }: { studentId: string }) => {
         };
         fetchName();
     }, [studentId]);
-    return <div className="text-xs text-gray-500 flex items-center gap-1 mt-1"><UserIcon size={10} /> {name}</div>;
+    return (
+      <button
+        onClick={() => onClick && onClick(studentId)}
+        className="text-xs text-gray-500 flex items-center gap-1 mt-1 hover:text-blue-600 transition-colors"
+      >
+        <UserIcon size={10} /> {name}
+      </button>
+    );
 }
 
-const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, userProfile }: { requests: Request[], onClaim: (id: string) => void, onUpdateStatus: (id: string, status: RequestStatus) => void, userId: string, onRefresh: () => void, userProfile: UserProfile }) => {
+const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, userProfile, onViewProfile }: { requests: Request[], onClaim: (id: string) => void, onUpdateStatus: (id: string, status: RequestStatus) => void, userId: string, onRefresh: () => void, userProfile: UserProfile, onViewProfile?: (userId: string) => void }) => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [viewActiveJob, setViewActiveJob] = useState(false);
     const handleRefresh = async () => { setIsRefreshing(true); await onRefresh(); setTimeout(() => setIsRefreshing(false), 500); };
@@ -55,7 +62,7 @@ const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, use
                         <div className="bg-blue-50 p-3 rounded-xl text-2xl">{req.type === 'food' ? '🍔' : req.type === 'printing' ? '🖨️' : '📦'}</div>
                         <div>
                             <h3 className="font-bold text-lg text-gray-900 capitalize leading-none">{req.type}</h3>
-                            <JobRequester studentId={req.student_id} />
+                            <JobRequester studentId={req.student_id} onClick={onViewProfile} />
                             <span className="text-xs text-gray-400 block mt-0.5">{new Date(req.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                         </div>
                     </div>
