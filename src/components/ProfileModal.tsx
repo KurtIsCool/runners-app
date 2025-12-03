@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, ImageIcon, Camera, QrCode, Star, Package, Bike } from 'lucide-react';
+import { Loader2, ImageIcon, Camera, QrCode, Star, History } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { type UserProfile } from '../types';
 
@@ -14,6 +14,7 @@ const ProfileModal = ({ userProfile, onSave, onClose, readOnly = false }: Profil
     const [name, setName] = useState(userProfile.name);
     const [phone, setPhone] = useState(userProfile.phone);
     const [uploading, setUploading] = useState(false);
+    // If readOnly, start on 'stats' tab
     const [activeTab, setActiveTab] = useState<'info' | 'stats'>(readOnly ? 'stats' : 'info');
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
@@ -33,6 +34,8 @@ const ProfileModal = ({ userProfile, onSave, onClose, readOnly = false }: Profil
          onSave(updateData);
          alert('Uploaded successfully!');
       } catch {
+         // In development environment without storage setup this will fail,
+         // so we simulate success for demo if it fails (optional, but good for UX in broken envs)
          console.error('Storage bucket might be missing.');
          alert('Upload failed (Storage bucket might be missing).');
       } finally {
@@ -98,23 +101,20 @@ const ProfileModal = ({ userProfile, onSave, onClose, readOnly = false }: Profil
                             {userProfile.avatar_url ? <img src={userProfile.avatar_url} className="w-full h-full object-cover"/> : <ImageIcon className="text-gray-400"/>}
                         </div>
                         <h3 className="text-lg font-bold text-gray-900 mb-1">{userProfile.name}</h3>
-                        <div className="flex items-center justify-center gap-2">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${isStudent ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>{userProfile.role}</span>
-                            {userProfile.is_verified && <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-green-100 text-green-700">Verified</span>}
-                        </div>
+                        <p className="text-xs text-gray-500 uppercase tracking-widest">{userProfile.role}</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100 text-center">
                             <div className="flex justify-center mb-2"><Star className="fill-yellow-400 text-yellow-400" size={24}/></div>
-                            <div className="text-2xl font-black text-gray-900">{ratingValue?.toFixed(1) || 'N/A'}</div>
+                            <div className="text-2xl font-black text-gray-900">{userProfile.rating?.toFixed(1) || 'N/A'}</div>
                             <div className="text-xs font-bold text-yellow-700 uppercase tracking-wide">Rating</div>
                             <div className="text-[10px] text-gray-400 mt-1">{userProfile.total_reviews || 0} reviews</div>
                         </div>
                         <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 text-center">
-                             <div className="flex justify-center mb-2">{React.createElement(historyIcon, { className: "text-blue-500", size: 24 })}</div>
+                             <div className="flex justify-center mb-2"><History className="text-blue-500" size={24}/></div>
                              <div className="text-2xl font-black text-gray-900">{userProfile.history?.length || 0}</div>
-                             <div className="text-xs font-bold text-blue-700 uppercase tracking-wide">{historyLabel}</div>
+                             <div className="text-xs font-bold text-blue-700 uppercase tracking-wide">Tasks Completed</div>
                         </div>
                     </div>
 
@@ -122,7 +122,7 @@ const ProfileModal = ({ userProfile, onSave, onClose, readOnly = false }: Profil
                     <div className="bg-gray-50 rounded-xl p-4">
                         <h4 className="font-bold text-sm text-gray-700 mb-3">Recent Activity</h4>
                         <div className="text-center text-sm text-gray-400 py-4">
-                            {readOnly ? "No recent activity visible." : "Detailed history is available in the Tracker/Dashboard view."}
+                            Detailed history is available in the Tracker/Dashboard view.
                         </div>
                     </div>
 
