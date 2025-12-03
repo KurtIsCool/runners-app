@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Loader2, X, MapPin, Navigation, Map } from 'lucide-react';
 import MapPicker from './MapPicker';
-import { reverseGeocode } from '../lib/geocoding';
 
 // Define the type for the form data
 interface RequestFormData {
@@ -9,10 +8,8 @@ interface RequestFormData {
     pickup_address: string;
     dropoff_address: string;
     details: string;
-    // New: Item Cost
-    item_cost: number;
-    price_estimate: number; // Runner Fee (Fixed 49)
-    // Coords
+    price_estimate: number;
+    // New fields
     pickup_lat: number;
     pickup_lng: number;
     dropoff_lat: number;
@@ -34,8 +31,7 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
       pickup_address: '',
       dropoff_address: '',
       details: '',
-      item_cost: 0,
-      price_estimate: 49, // Fixed Runner Fee
+      price_estimate: 49, // Fixed price as per request
       pickup_lat: 0,
       pickup_lng: 0,
       dropoff_lat: 0,
@@ -43,36 +39,26 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
     });
 
     const [locationMode, setLocationMode] = useState<LocationMode>(null);
-    const [addressLoading, setAddressLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setLoading(true);
+      // Pass the data in the format expected by App.tsx (even though we are updating App.tsx later, let's align with new types)
       await onSubmit({
         ...formData,
-        // Map to legacy fields if needed
+        // Compatibility with legacy single point if needed, or just new fields
         lat: formData.pickup_lat,
         lng: formData.pickup_lng
       });
       setLoading(false);
     };
 
-    const handleLocationSelect = async (lat: number, lng: number) => {
-      let addressUpdate = {};
-
-      setAddressLoading(true);
-      const address = await reverseGeocode(lat, lng);
-      setAddressLoading(false);
-
+    const handleLocationSelect = (lat: number, lng: number) => {
       if (locationMode === 'pickup') {
-        addressUpdate = { pickup_lat: lat, pickup_lng: lng };
-        if (address) addressUpdate = { ...addressUpdate, pickup_address: address };
+        setFormData({ ...formData, pickup_lat: lat, pickup_lng: lng });
       } else if (locationMode === 'dropoff') {
-        addressUpdate = { dropoff_lat: lat, dropoff_lng: lng };
-        if (address) addressUpdate = { ...addressUpdate, dropoff_address: address };
+        setFormData({ ...formData, dropoff_lat: lat, dropoff_lng: lng });
       }
-
-      setFormData(prev => ({ ...prev, ...addressUpdate }));
     };
 
     return (
@@ -125,10 +111,7 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
                       />
                    </div>
                 )}
-                <div className="relative">
-                    <input required type="text" placeholder="e.g. Jollibee, Library" className="w-full bg-transparent text-sm font-medium text-gray-900 placeholder-gray-400 outline-none" value={formData.pickup_address} onChange={(e) => setFormData({...formData, pickup_address: e.target.value})}/>
-                    {addressLoading && locationMode === 'pickup' && <Loader2 size={14} className="animate-spin absolute right-0 top-1 text-blue-500"/>}
-                </div>
+                <input required type="text" placeholder="e.g. Jollibee, Library" className="w-full bg-transparent text-sm font-medium text-gray-900 placeholder-gray-400 outline-none" value={formData.pickup_address} onChange={(e) => setFormData({...formData, pickup_address: e.target.value})}/>
               </div>
 
               <div className="bg-gray-50 px-3 py-2.5 rounded-xl border border-gray-100 focus-within:border-green-400 focus-within:ring-2 focus-within:ring-green-500/10 transition-all">
@@ -149,10 +132,7 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
                       />
                    </div>
                 )}
-                <div className="relative">
-                    <input required type="text" placeholder="e.g. Dorm Room 305" className="w-full bg-transparent text-sm font-medium text-gray-900 placeholder-gray-400 outline-none" value={formData.dropoff_address} onChange={(e) => setFormData({...formData, dropoff_address: e.target.value})}/>
-                    {addressLoading && locationMode === 'dropoff' && <Loader2 size={14} className="animate-spin absolute right-0 top-1 text-green-500"/>}
-                </div>
+                <input required type="text" placeholder="e.g. Dorm Room 305" className="w-full bg-transparent text-sm font-medium text-gray-900 placeholder-gray-400 outline-none" value={formData.dropoff_address} onChange={(e) => setFormData({...formData, dropoff_address: e.target.value})}/>
               </div>
             </div>
 
@@ -161,34 +141,16 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
               <textarea required rows={2} placeholder="Add details (e.g. 'No pickles')..." className="w-full px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium text-gray-700 resize-none" value={formData.details} onChange={(e) => setFormData({...formData, details: e.target.value})}/>
             </div>
 
-            <div className="space-y-2">
-               {/* Item Cost Input */}
-               <div className="bg-white border border-gray-200 p-3 rounded-xl flex items-center justify-between">
-                  <label className="text-xs font-bold text-gray-500">Estimated Item Cost</label>
-                  <div className="flex items-center gap-1">
-                     <span className="text-gray-400 text-sm">₱</span>
-                     <input type="number" min="0" placeholder="0" className="w-16 text-right font-bold text-lg outline-none" value={formData.item_cost || ''} onChange={(e) => setFormData({...formData, item_cost: Number(e.target.value)})}/>
-                  </div>
-               </div>
-
-               {/* Summary Card */}
-               <div className="bg-gradient-to-br from-gray-900 to-black p-4 rounded-xl text-white shadow-xl">
-                  <div className="flex justify-between items-center mb-1 text-xs text-gray-400">
-                     <span>Runner Fee (Fixed)</span>
-                     <span>₱{formData.price_estimate}</span>
-                  </div>
-                   <div className="flex justify-between items-center mb-3 text-xs text-gray-400 border-b border-gray-700 pb-2">
-                     <span>Est. Item Cost</span>
-                     <span>₱{formData.item_cost || 0}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                     <div>
-                       <span className="block text-xs font-bold text-gray-300">Total Estimate</span>
-                       <span className="text-[10px] text-gray-500">Prepare this amount</span>
-                     </div>
-                     <span className="text-2xl font-black text-white">₱{(formData.price_estimate + (formData.item_cost || 0))}</span>
-                  </div>
-               </div>
+            <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-4 rounded-xl flex items-center justify-between shadow-lg shadow-blue-600/20 text-white">
+              <div>
+                <span className="block text-xs font-bold text-blue-100">Runner Fee</span>
+                <span className="text-[10px] text-blue-200">Fixed rate</span>
+              </div>
+              <div className="flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-lg backdrop-blur-md border border-white/20">
+                <span className="text-blue-100 font-bold text-sm">₱</span>
+                {/* Fixed Price is read-only now */}
+                <span className="text-xl font-black text-white">{formData.price_estimate}</span>
+              </div>
             </div>
 
             <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-all btn-press shadow-xl shadow-blue-200 flex justify-center items-center gap-2 text-sm">
