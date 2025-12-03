@@ -16,12 +16,15 @@ interface AppContentProps {
   setShowRequestForm: (show: boolean) => void;
   setShowRatingModal: (request: Request | null) => void;
   setShowProfileModal: (show: boolean) => void;
+  // New: Handler for viewing other profiles
+  setShowPublicProfileModal?: (userId: string) => void;
   onLogout: () => void;
   fetchRequests: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   createRequest?: (data: any) => Promise<void>;
   updateRequestStatus: (id: string, status: string) => Promise<void>;
   assignRequest: (id: string, runnerId: string) => Promise<void>;
-  rateRequest: (id: string, rating: number) => Promise<void>;
+  rateRequest: (id: string, rating: number, comment?: string) => Promise<void>;
   currentUserId: string;
 }
 
@@ -33,6 +36,7 @@ export default function AppContent({
   setShowRequestForm,
   setShowRatingModal,
   setShowProfileModal,
+  setShowPublicProfileModal,
   onLogout,
   fetchRequests,
   updateRequestStatus,
@@ -40,6 +44,16 @@ export default function AppContent({
   rateRequest,
   currentUserId
 }: AppContentProps) {
+
+  // Moved useEffect to top level
+  useEffect(() => {
+    const handleNavigation = (e: Event) => {
+       const detail = (e as CustomEvent).detail;
+       if (detail) setView(detail);
+    };
+    window.addEventListener('navigate', handleNavigation);
+    return () => window.removeEventListener('navigate', handleNavigation);
+  }, [setView]);
 
   if (view === 'home') {
     if (userProfile?.role === 'student') {
@@ -87,6 +101,7 @@ export default function AppContent({
           userId={currentUserId}
           onRefresh={fetchRequests}
           userProfile={userProfile!}
+          onViewProfile={setShowPublicProfileModal}
         />
       );
     }
@@ -97,10 +112,11 @@ export default function AppContent({
       <RequestTracker
         requests={requests.filter(r => r.student_id === currentUserId)}
         currentUserId={currentUserId}
-        onRate={(req, r) => {
-            if (r > 0) rateRequest(req.id, r);
+        onRate={(req, r, c) => {
+            if (r > 0) rateRequest(req.id, r, c);
             else setShowRatingModal(req);
         }}
+        onViewProfile={setShowPublicProfileModal}
       />
     );
   }
@@ -108,19 +124,10 @@ export default function AppContent({
   if (view === 'dashboard') {
     return (
       <div className="max-w-3xl mx-auto">
-        <RunnerDashboard requests={requests} userId={currentUserId} />
+        <RunnerDashboard requests={requests} userId={currentUserId} onViewProfile={setShowPublicProfileModal} />
       </div>
     );
   }
-
-  useEffect(() => {
-    const handleNavigation = (e: Event) => {
-       const detail = (e as CustomEvent).detail;
-       if (detail) setView(detail);
-    };
-    window.addEventListener('navigate', handleNavigation);
-    return () => window.removeEventListener('navigate', handleNavigation);
-  }, [setView]);
 
   if (view === 'profile') {
     return (
