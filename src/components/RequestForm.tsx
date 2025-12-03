@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Loader2, X, MapPin, Navigation, Map } from 'lucide-react';
 import MapPicker from './MapPicker';
+import { reverseGeocode } from '../lib/geocoding';
 
 // Define the type for the form data
 interface RequestFormData {
@@ -53,11 +54,23 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
       setLoading(false);
     };
 
-    const handleLocationSelect = (lat: number, lng: number) => {
+    const handleLocationSelect = async (lat: number, lng: number) => {
+      // Optimistic update of coordinates
       if (locationMode === 'pickup') {
-        setFormData({ ...formData, pickup_lat: lat, pickup_lng: lng });
+          setFormData(prev => ({ ...prev, pickup_lat: lat, pickup_lng: lng }));
       } else if (locationMode === 'dropoff') {
-        setFormData({ ...formData, dropoff_lat: lat, dropoff_lng: lng });
+          setFormData(prev => ({ ...prev, dropoff_lat: lat, dropoff_lng: lng }));
+      }
+
+      // Fetch address
+      const address = await reverseGeocode(lat, lng);
+
+      if (address) {
+          if (locationMode === 'pickup') {
+            setFormData(prev => ({ ...prev, pickup_address: address }));
+          } else if (locationMode === 'dropoff') {
+            setFormData(prev => ({ ...prev, dropoff_address: address }));
+          }
       }
     };
 

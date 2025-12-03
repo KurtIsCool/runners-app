@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Loader2, ImageIcon, Camera, QrCode, Star, Package, Bike } from 'lucide-react';
+import { Loader2, ImageIcon, Camera, QrCode, Star, Package } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { type UserProfile } from '../types';
+import AppLogo from './AppLogo';
 
 interface ProfileModalProps {
     userProfile: UserProfile;
@@ -48,7 +49,7 @@ const ProfileModal = ({ userProfile, onSave, onClose, readOnly = false }: Profil
     // Use role specific rating if available, else overall
     const ratingValue = isStudent ? userProfile.student_rating : (userProfile.runner_rating || userProfile.rating);
     const historyLabel = isStudent ? "Requests Made" : "Tasks Completed";
-    const HistoryIcon = isStudent ? Package : Bike;
+    const HistoryIcon = isStudent ? Package : () => <AppLogo className="h-6 w-6 text-blue-500" />;
 
     return (
       <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm pop-in">

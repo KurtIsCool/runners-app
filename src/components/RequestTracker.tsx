@@ -103,19 +103,25 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
               <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-3"><div className="flex gap-3"><div className="mt-1"><MapPin size={16} className="text-red-500"/></div><div><div className="text-xs font-bold text-gray-500 uppercase">Pickup</div><div className="text-sm font-medium">{req.pickup_address}</div></div></div><div className="flex gap-3"><div className="mt-1"><Navigation size={16} className="text-green-500"/></div><div><div className="text-xs font-bold text-gray-500 uppercase">Dropoff</div><div className="text-sm font-medium">{req.dropoff_address}</div></div></div><div className="pt-2 mt-2 border-t border-gray-200"><div className="text-xs font-bold text-gray-500 uppercase mb-1">Details</div><p className="text-sm text-gray-700">{req.details}</p></div></div>
 
               {/* Proof of Delivery Section */}
-              {req.status === 'delivered' && req.proof_url && (
+              {req.status === 'delivered' && (
                   <div className="mb-4">
                       <div className="bg-green-50 border border-green-100 rounded-xl p-3">
                           <p className="text-xs font-bold text-green-800 mb-2 uppercase">Proof of Delivery</p>
-                          <img
-                            src={req.proof_url}
-                            alt="Proof"
-                            className="w-full h-32 object-cover rounded-lg cursor-pointer"
-                            onClick={() => setViewProofId(req.id)}
-                          />
+                          {req.proof_url ? (
+                              <img
+                                src={req.proof_url}
+                                alt="Proof"
+                                className="w-full h-32 object-cover rounded-lg cursor-pointer bg-gray-100"
+                                onClick={() => setViewProofId(req.id)}
+                              />
+                          ) : (
+                              <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs italic">
+                                  No proof image available
+                              </div>
+                          )}
                           <div className="mt-3 flex gap-2">
-                              <button onClick={() => handleConfirm(req.id)} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-green-700">Confirm Completion</button>
-                              <button onClick={() => handleDispute(req.id)} className="flex-1 bg-red-100 text-red-600 font-bold py-2 rounded-lg text-sm hover:bg-red-200">Dispute</button>
+                              <button onClick={() => handleConfirm(req.id)} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-green-700 btn-press">Confirm Completion</button>
+                              <button onClick={() => handleDispute(req.id)} className="flex-1 bg-red-100 text-red-600 font-bold py-2 rounded-lg text-sm hover:bg-red-200 btn-press">Dispute</button>
                           </div>
                       </div>
                   </div>
