@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Loader2, X, MapPin, Navigation } from 'lucide-react';
+import { Loader2, X, MapPin, Navigation, Map } from 'lucide-react';
+import MapPicker from './MapPicker';
 
 // Define the type for the form data
 interface RequestFormData {
@@ -8,24 +9,62 @@ interface RequestFormData {
     dropoff_address: string;
     details: string;
     price_estimate: number;
-    lat: number;
-    lng: number;
+    // New fields
+    pickup_lat: number;
+    pickup_lng: number;
+    dropoff_lat: number;
+    dropoff_lng: number;
 }
 
 interface RequestFormProps {
-    onSubmit: (data: RequestFormData) => Promise<void>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onSubmit: (data: any) => Promise<void>;
     onCancel: () => void;
 }
 
+type LocationMode = 'pickup' | 'dropoff' | null;
+
 const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState<RequestFormData>({ type: 'food', pickup_address: '', dropoff_address: '', details: '', price_estimate: 50, lat: 0, lng: 0 });
-    const handleSubmit = async (e: React.FormEvent) => { e.preventDefault(); setLoading(true); await onSubmit(formData); setLoading(false); };
+    const [formData, setFormData] = useState<RequestFormData>({
+      type: 'food',
+      pickup_address: '',
+      dropoff_address: '',
+      details: '',
+      price_estimate: 49, // Fixed price as per request
+      pickup_lat: 0,
+      pickup_lng: 0,
+      dropoff_lat: 0,
+      dropoff_lng: 0
+    });
+
+    const [locationMode, setLocationMode] = useState<LocationMode>(null);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setLoading(true);
+      // Pass the data in the format expected by App.tsx (even though we are updating App.tsx later, let's align with new types)
+      await onSubmit({
+        ...formData,
+        // Compatibility with legacy single point if needed, or just new fields
+        lat: formData.pickup_lat,
+        lng: formData.pickup_lng
+      });
+      setLoading(false);
+    };
+
+    const handleLocationSelect = (lat: number, lng: number) => {
+      if (locationMode === 'pickup') {
+        setFormData({ ...formData, pickup_lat: lat, pickup_lng: lng });
+      } else if (locationMode === 'dropoff') {
+        setFormData({ ...formData, dropoff_lat: lat, dropoff_lng: lng });
+      }
+    };
 
     return (
       <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm pop-in">
-        <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl scale-100 transition-all">
-          <div className="bg-white border-b border-gray-100 px-5 py-4 flex justify-between items-center">
+        <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl scale-100 transition-all max-h-[90vh] overflow-y-auto no-scrollbar">
+          <div className="bg-white border-b border-gray-100 px-5 py-4 flex justify-between items-center sticky top-0 z-10">
             <div><h3 className="font-bold text-lg text-gray-900">Create Request</h3><p className="text-gray-500 text-xs mt-0.5">What do you need help with?</p></div>
             <button onClick={onCancel} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition-all hover:rotate-90 text-gray-600"><X size={18}/></button>
           </div>
@@ -55,16 +94,44 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
 
             <div className="space-y-3">
               <div className="bg-gray-50 px-3 py-2.5 rounded-xl border border-gray-100 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all">
-                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-gray-400 mb-1">
-                  <MapPin size={12} className="text-red-500" /> Pickup
-                </label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-gray-400">
+                    <MapPin size={12} className="text-red-500" /> Pickup Location
+                  </label>
+                  <button type="button" onClick={() => setLocationMode(locationMode === 'pickup' ? null : 'pickup')} className="text-[10px] flex items-center gap-1 text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-lg hover:bg-blue-100">
+                    <Map size={10} /> {locationMode === 'pickup' ? 'Hide Map' : 'Set on Map'}
+                  </button>
+                </div>
+                {locationMode === 'pickup' && (
+                   <div className="mb-2">
+                      <MapPicker
+                        initialLat={formData.pickup_lat || undefined}
+                        initialLng={formData.pickup_lng || undefined}
+                        onLocationSelect={handleLocationSelect}
+                      />
+                   </div>
+                )}
                 <input required type="text" placeholder="e.g. Jollibee, Library" className="w-full bg-transparent text-sm font-medium text-gray-900 placeholder-gray-400 outline-none" value={formData.pickup_address} onChange={(e) => setFormData({...formData, pickup_address: e.target.value})}/>
               </div>
 
               <div className="bg-gray-50 px-3 py-2.5 rounded-xl border border-gray-100 focus-within:border-green-400 focus-within:ring-2 focus-within:ring-green-500/10 transition-all">
-                <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-gray-400 mb-1">
-                  <Navigation size={12} className="text-green-500" /> Dropoff
-                </label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-gray-400">
+                    <Navigation size={12} className="text-green-500" /> Dropoff Location
+                  </label>
+                  <button type="button" onClick={() => setLocationMode(locationMode === 'dropoff' ? null : 'dropoff')} className="text-[10px] flex items-center gap-1 text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-lg hover:bg-green-100">
+                    <Map size={10} /> {locationMode === 'dropoff' ? 'Hide Map' : 'Set on Map'}
+                  </button>
+                </div>
+                 {locationMode === 'dropoff' && (
+                   <div className="mb-2">
+                      <MapPicker
+                         initialLat={formData.dropoff_lat || undefined}
+                         initialLng={formData.dropoff_lng || undefined}
+                         onLocationSelect={handleLocationSelect}
+                      />
+                   </div>
+                )}
                 <input required type="text" placeholder="e.g. Dorm Room 305" className="w-full bg-transparent text-sm font-medium text-gray-900 placeholder-gray-400 outline-none" value={formData.dropoff_address} onChange={(e) => setFormData({...formData, dropoff_address: e.target.value})}/>
               </div>
             </div>
@@ -76,12 +143,13 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
 
             <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-4 rounded-xl flex items-center justify-between shadow-lg shadow-blue-600/20 text-white">
               <div>
-                <span className="block text-xs font-bold text-blue-100">Total Offer</span>
-                <span className="text-[10px] text-blue-200">Fee & item cost</span>
+                <span className="block text-xs font-bold text-blue-100">Runner Fee</span>
+                <span className="text-[10px] text-blue-200">Fixed rate</span>
               </div>
               <div className="flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-lg backdrop-blur-md border border-white/20">
                 <span className="text-blue-100 font-bold text-sm">₱</span>
-                <input type="number" className="w-16 bg-transparent text-right font-black text-xl text-white outline-none placeholder-blue-300/50" value={formData.price_estimate} onChange={(e) => setFormData({...formData, price_estimate: Number(e.target.value)})}/>
+                {/* Fixed Price is read-only now */}
+                <span className="text-xl font-black text-white">{formData.price_estimate}</span>
               </div>
             </div>
 
