@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Bike, AlertCircle, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { BookOpen, AlertCircle, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 import { type UserRole } from '../types';
 import AppLogo from './AppLogo';
 
@@ -58,7 +58,7 @@ const AuthScreen = ({ onLogin, onSignup }: { onLogin: (e: string, p: string) => 
                  <p className="text-xs text-blue-200 opacity-80">Get food & prints delivered.</p>
                </div>
                <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 flex-1">
-                 <Bike className="mb-2 text-green-300" />
+                 <AppLogo className="mb-2 h-6 w-6 text-green-300" />
                  <h3 className="font-bold">Runners</h3>
                  <p className="text-xs text-blue-200 opacity-80">Earn cash in your free time.</p>
                </div>
@@ -147,7 +147,7 @@ const AuthScreen = ({ onLogin, onSignup }: { onLogin: (e: string, p: string) => 
                         onClick={() => setRole('runner')}
                         className={`cursor-pointer p-4 rounded-xl border-2 transition-all text-center ${role === 'runner' ? 'border-green-500 bg-green-50' : 'border-gray-100 hover:border-gray-300'}`}
                       >
-                        <Bike className={`mx-auto mb-2 ${role === 'runner' ? 'text-green-600' : 'text-gray-400'}`} size={24}/>
+                        <AppLogo className={`mx-auto mb-2 h-6 w-6 ${role === 'runner' ? 'text-green-600' : 'text-gray-400'}`} />
                         <div className={`font-bold text-sm ${role === 'runner' ? 'text-green-700' : 'text-gray-600'}`}>Runner</div>
                       </div>
                     </div>

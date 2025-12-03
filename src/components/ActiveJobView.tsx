@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Minimize2, QrCode, CheckCircle, ShoppingBag, Bike, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera } from 'lucide-react';
+import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera } from 'lucide-react';
+import AppLogo from './AppLogo';
 import { type Request, type UserProfile, type RequestStatus } from '../types';
 import ChatBox from './ChatBox';
 import MapViewer from './MapViewer';
@@ -89,7 +90,7 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose }: { 
                 <div className="text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-wide">Current Status</div>
                 <div className="flex items-center justify-between relative px-2">
                    <div className="absolute top-3 left-0 w-full h-0.5 bg-gray-100 -z-10"></div>
-                   {[{s: 'accepted', icon: CheckCircle, label: 'Accepted'},{s: 'purchasing', icon: ShoppingBag, label: 'Buying'},{s: 'delivering', icon: Bike, label: 'Delivery'},{s: 'delivered', icon: Camera, label: 'Delivered'}, {s: 'completed', icon: Star, label: 'Done'}].map((step, idx) => {
+                   {[{s: 'accepted', icon: CheckCircle, label: 'Accepted'},{s: 'purchasing', icon: ShoppingBag, label: 'Buying'},{s: 'delivering', icon: () => <AppLogo className="h-3 w-3" />, label: 'Delivery'},{s: 'delivered', icon: Camera, label: 'Delivered'}, {s: 'completed', icon: Star, label: 'Done'}].map((step, idx) => {
                       const isActive = step.s === job.status;
                       const isPast = ['accepted', 'purchasing', 'delivering', 'delivered', 'completed'].indexOf(job.status) >= idx;
                       const Icon = step.icon;
@@ -136,7 +137,7 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose }: { 
 
           <div className="p-4 border-t bg-white pb-safe-nav shrink-0">
              {job.status === 'accepted' && <button disabled={updating} onClick={() => handleStatusUpdate('purchasing')} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-base hover:bg-blue-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-blue-200">{updating ? <Loader2 className="animate-spin"/> : <>Start Purchasing <ArrowRight size={18}/></>}</button>}
-             {job.status === 'purchasing' && <button disabled={updating} onClick={() => handleStatusUpdate('delivering')} className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold text-base hover:bg-purple-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-purple-200">{updating ? <Loader2 className="animate-spin"/> : <>Start Delivering <Bike size={18}/></>}</button>}
+             {job.status === 'purchasing' && <button disabled={updating} onClick={() => handleStatusUpdate('delivering')} className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold text-base hover:bg-purple-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-purple-200">{updating ? <Loader2 className="animate-spin"/> : <>Start Delivering <AppLogo className="h-5 w-5 text-white" /></>}</button>}
              {job.status === 'delivering' && <button disabled={updating} onClick={() => setShowProofUpload(true)} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-base hover:bg-green-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-green-200">{updating ? <Loader2 className="animate-spin"/> : <>Upload Proof & Finish <Camera size={18}/></>}</button>}
              {job.status === 'delivered' && <div className="w-full bg-yellow-100 text-yellow-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center">Waiting for Student Confirmation</div>}
              {job.status === 'completed' && <div className="w-full bg-green-100 text-green-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center"><CheckCircle/> Job Completed!</div>}

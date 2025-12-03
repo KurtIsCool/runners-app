@@ -21,18 +21,15 @@ export default function MobileLayout({ children, view, setView, userProfile }: M
       <nav className="bg-white/90 backdrop-blur-md border-b sticky top-0 z-40 shadow-sm">
         <div className="px-4 h-16 flex items-center justify-between relative">
 
-          {/* Invisible Spacer Left to balance layout if needed, but absolute centering is better */}
-          <div className="w-8"></div>
-
-          {/* Logo Centered */}
-          <div onClick={() => setView('home')} className="absolute left-1/2 transform -translate-x-1/2 cursor-pointer">
-            <AppLogo className="h-8" />
+          {/* Logo Left */}
+          <div onClick={() => setView('home')} className="cursor-pointer flex items-center">
+            <AppLogo className="h-10" />
           </div>
 
           {/* Profile on Right */}
           <div
             onClick={() => setView('profile')}
-            className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden cursor-pointer flex items-center justify-center border border-gray-100"
+            className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden cursor-pointer flex items-center justify-center border border-gray-100 ml-auto"
           >
             {userProfile?.avatar_url ? (
               <img src={userProfile.avatar_url} className="w-full h-full object-cover" alt="Profile" />

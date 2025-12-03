@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import AppLogo from '../AppLogo';
 import DesktopSidebar from '../DesktopSidebar';
 import { type UserProfile, type UserRole } from '../../types';
 
@@ -29,14 +28,6 @@ export default function DesktopLayout({ children, view, setView, userProfile, on
 
       {/* Main Content Area */}
       <div className="flex-1 desktop-main flex flex-col relative" style={{ marginLeft: '280px' }}>
-        {/* Top Right Logo for Desktop */}
-        <div
-          className="absolute top-8 right-8 z-50 opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
-          onClick={() => setView('home')}
-        >
-          <AppLogo className="h-12" />
-        </div>
-
         <main className="p-8 max-w-5xl w-full mx-auto flex-1 pb-8">
           {children}
         </main>

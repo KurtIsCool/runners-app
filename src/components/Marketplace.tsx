@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw, Navigation, ArrowRight, Bike, ChevronRight, User as UserIcon } from 'lucide-react';
+import { RefreshCw, Navigation, ArrowRight, ChevronRight, User as UserIcon } from 'lucide-react';
+import AppLogo from './AppLogo';
 import { type Request, type UserProfile, type RequestStatus } from '../types';
 import ActiveJobView from './ActiveJobView';
 import { supabase } from '../lib/supabase';
@@ -43,7 +44,7 @@ const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, use
         {myActiveJob && (
             <div className="bg-blue-600 text-white p-4 rounded-xl flex items-center justify-between shadow-lg cursor-pointer hover:bg-blue-700 transition" onClick={() => setViewActiveJob(true)}>
                <div className="flex items-center gap-3">
-                  <div className="bg-white/20 p-2 rounded-lg"><Bike size={20} className="animate-pulse"/></div>
+                  <div className="bg-white/20 p-2 rounded-lg"><AppLogo className="h-5 w-5 animate-pulse text-white"/></div>
                   <div><div className="font-bold text-sm">Mission in Progress</div><p className="text-xs text-blue-100">Click to resume</p></div>
                </div>
                <ChevronRight />
