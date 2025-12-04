@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { X, Upload } from 'lucide-react';
+import { Camera, X, Upload } from 'lucide-react';
 
 interface PaymentUploadProps {
     onUpload: (url: string) => void;

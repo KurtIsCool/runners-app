@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera, X } from 'lucide-react';
+import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera, ExternalLink, X } from 'lucide-react';
 import AppLogo from './AppLogo';
 import { type Request, type UserProfile, type RequestStatus } from '../types';
 import ChatBox from './ChatBox';
@@ -104,11 +104,18 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
                    <div className="absolute top-3 left-0 w-full h-0.5 bg-gray-100 -z-10"></div>
                    {[{s: 'accepted', icon: CheckCircle, label: 'Accepted'},{s: 'purchasing', icon: ShoppingBag, label: 'Buying'},{s: 'delivering', icon: () => <AppLogo className="h-3 w-3" />, label: 'Delivery'},{s: 'delivered', icon: Camera, label: 'Delivered'}, {s: 'completed', icon: Star, label: 'Done'}].map((step, idx) => {
                       const isActive = step.s === job.status;
+                      // Handle disputed status visually in the stepper (treat as not past, or handle specially if needed)
+                      // If disputed, we might want to show everything up to delivered as "past" but maybe red?
+                      // For now, let's just make sure it doesn't break.
+                      // If status is 'disputed', indexOf returns -1, so isPast is false for all.
+                      // Let's modify logic: if disputed, we assume it went through the process up to delivered usually.
                       const statusList = ['accepted', 'purchasing', 'delivering', 'delivered', 'completed'];
                       let currentIdx = statusList.indexOf(job.status);
-                      if (job.status === 'disputed') currentIdx = 3;
+                      if (job.status === 'disputed') currentIdx = 3; // Assume it was at least delivered to be disputed
+
                       const isPast = currentIdx >= idx;
                       const isDisputed = job.status === 'disputed';
+
                       const Icon = step.icon;
                       return (
                         <div key={step.s} className="flex flex-col items-center">
@@ -120,14 +127,22 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
                 </div>
              </div>
 
-             {/* Map View */}
-             {(job.pickup_lat || job.dropoff_lat) && (
-                 <div className="mb-2">
-                      <MapViewer
-                         pickup={job.pickup_lat ? { lat: job.pickup_lat, lng: job.pickup_lng! } : undefined}
-                         dropoff={job.dropoff_lat ? { lat: job.dropoff_lat, lng: job.dropoff_lng! } : undefined}
-                      />
-                 </div>
+             {/* Payment Verification Section */}
+             {job.status === 'accepted' && !job.is_paid && (
+                <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 animate-pulse">
+                    <h3 className="font-bold text-orange-800 text-sm mb-2 flex items-center gap-2"><CheckCircle size={16}/> Payment Required</h3>
+                    {job.payment_proof_url ? (
+                        <div>
+                            <p className="text-xs text-orange-700 mb-2">Student has submitted payment. Please verify.</p>
+                            <button onClick={() => setShowPaymentProof(true)} className="w-full bg-white border border-orange-200 text-orange-700 font-bold py-2 rounded-lg text-xs mb-2 hover:bg-orange-100">View Receipt</button>
+                            <button onClick={confirmPayment} disabled={verifyingPayment} className="w-full bg-orange-600 text-white font-bold py-3 rounded-lg text-sm hover:bg-orange-700 btn-press">
+                                {verifyingPayment ? 'Verifying...' : 'Confirm Payment Received'}
+                            </button>
+                        </div>
+                    ) : (
+                        <p className="text-xs text-orange-700">Waiting for student to transfer payment...</p>
+                    )}
+                </div>
              )}
 
              {/* Payment Verification Section */}
