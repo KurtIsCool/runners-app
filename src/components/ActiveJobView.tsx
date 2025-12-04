@@ -145,6 +145,24 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
                 </div>
              )}
 
+             {/* Payment Verification Section */}
+             {job.status === 'accepted' && !job.is_paid && (
+                <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 animate-pulse">
+                    <h3 className="font-bold text-orange-800 text-sm mb-2 flex items-center gap-2"><CheckCircle size={16}/> Payment Required</h3>
+                    {job.payment_proof_url ? (
+                        <div>
+                            <p className="text-xs text-orange-700 mb-2">Student has submitted payment. Please verify.</p>
+                            <button onClick={() => setShowPaymentProof(true)} className="w-full bg-white border border-orange-200 text-orange-700 font-bold py-2 rounded-lg text-xs mb-2 hover:bg-orange-100">View Receipt</button>
+                            <button onClick={confirmPayment} disabled={verifyingPayment} className="w-full bg-orange-600 text-white font-bold py-3 rounded-lg text-sm hover:bg-orange-700 btn-press">
+                                {verifyingPayment ? 'Verifying...' : 'Confirm Payment Received'}
+                            </button>
+                        </div>
+                    ) : (
+                        <p className="text-xs text-orange-700">Waiting for student to transfer payment...</p>
+                    )}
+                </div>
+             )}
+
              <div className="grid grid-cols-1 gap-3 stagger-enter">
                 <div className="bg-white p-3 rounded-xl border border-gray-100 flex gap-3 items-center">
                     <div className="bg-red-50 p-2 rounded-lg"><MapPin className="text-red-500" size={18}/></div>
