@@ -224,8 +224,17 @@ export default function App() {
   };
 
   const assignRequest = async (id: string, runnerId: string) => {
-    // IMPORTANT: Set status to 'pending_runner' instead of 'accepted'
-    await supabase.from('requests').update({ runner_id: runnerId, status: 'pending_runner' }).eq('id', id);
+    // Optimistic locking: Only update if status is 'requested'
+    const { data, error } = await supabase
+        .from('requests')
+        .update({ runner_id: runnerId, status: 'pending_runner' })
+        .eq('id', id)
+        .eq('status', 'requested')
+        .select();
+
+    if (error || !data || data.length === 0) {
+        throw new Error("Job already taken or unavailable.");
+    }
   };
 
   const rateRequest = async (id: string, rating: number, comment?: string) => {

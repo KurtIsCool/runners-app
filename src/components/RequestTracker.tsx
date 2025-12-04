@@ -225,7 +225,8 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
               )}
 
               {/* Payment Section */}
-              {(req.status === 'awaiting_payment' || req.status === 'payment_review') && req.runner_id && (
+              {/* Show payment section if awaiting payment or review. Also show if accepted but not paid (shouldn't happen in happy path but safety). */}
+              {((req.status === 'awaiting_payment' || req.status === 'payment_review') || (req.status === 'accepted' && !req.is_paid)) && req.runner_id && (
                   <div className="mb-4">
                       <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                           <h4 className="font-bold text-blue-900 text-sm mb-3 uppercase flex items-center gap-2"><DollarSign size={16}/> Payment Required</h4>

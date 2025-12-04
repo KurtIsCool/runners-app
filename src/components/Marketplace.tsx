@@ -30,14 +30,18 @@ const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, use
     const [viewActiveJob, setViewActiveJob] = useState(false);
     const handleRefresh = async () => { setIsRefreshing(true); await onRefresh(); setTimeout(() => setIsRefreshing(false), 500); };
 
-    // Exclude disputed jobs so runner is not blocked
-    const myActiveJob = requests.find(r => r.runner_id === userId && r.status !== 'completed' && r.status !== 'cancelled' && r.status !== 'disputed');
+    // Exclude disputed jobs so runner is not blocked.
+    // Ensure all active states are caught.
+    const myActiveJob = requests.find(r =>
+        r.runner_id === userId &&
+        ['pending_runner', 'awaiting_payment', 'payment_review', 'accepted', 'purchasing', 'delivering', 'delivered'].includes(r.status)
+    );
 
     // Helper to get banner content based on status
     const getBannerContent = (status: RequestStatus) => {
         switch (status) {
-            case 'pending_runner': return { title: 'Waiting for Approval', sub: 'Student is reviewing your offer' };
-            case 'awaiting_payment': return { title: 'Waiting for Payment', sub: 'Student needs to pay first' };
+            case 'pending_runner': return { title: 'Application Sent', sub: 'Waiting for student approval' };
+            case 'awaiting_payment': return { title: 'Offer Accepted', sub: 'Waiting for payment' };
             case 'payment_review': return { title: 'Payment Review', sub: 'Confirm receipt of payment' };
             default: return { title: 'Mission in Progress', sub: 'Click to resume' };
         }
