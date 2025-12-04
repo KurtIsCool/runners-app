@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, CheckCircle, DollarSign, Navigation, Star, X, Package, Copy, MessageCircle, Phone, MapPin, User as UserIcon, ShieldAlert } from 'lucide-react';
+import { Clock, CheckCircle, DollarSign, Navigation, Star, X, Package, Copy, MessageCircle, Phone, MapPin, User as UserIcon } from 'lucide-react';
 import { type Request, type RequestStatus } from '../types';
 import ChatBox from './ChatBox';
 import MapViewer from './MapViewer';
@@ -52,7 +52,7 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
           delivered: { color: 'bg-teal-100 text-teal-800', icon: CheckCircle, label: 'Delivered' },
           completed: { color: 'bg-green-100 text-green-800', icon: Star, label: 'Completed' },
           cancelled: { color: 'bg-red-100 text-red-800', icon: X, label: 'Cancelled' },
-          disputed: { color: 'bg-red-100 text-red-800', icon: ShieldAlert, label: 'Disputed' }
+          disputed: { color: 'bg-red-100 text-red-800', icon: X, label: 'Disputed' }
       }[status] || { color: 'bg-gray-100', icon: Clock, label: status };
       const Icon = config.icon;
       return <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${config.color}`}><Icon size={14} />{config.label}</div>;
@@ -61,11 +61,6 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
     const handleConfirm = async (id: string) => {
         const { error } = await supabase.from('requests').update({ status: 'completed', confirmed_at: new Date().toISOString() }).eq('id', id);
         if (error) alert('Error confirming request');
-    };
-
-    const handleDispute = async (id: string) => {
-        const { error } = await supabase.from('requests').update({ status: 'disputed' }).eq('id', id);
-        if (error) alert('Error disputing request');
     };
 
     const activeRequests = requests.filter(r => r.status !== 'cancelled' && r.status !== 'completed');
@@ -120,8 +115,11 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
                               </div>
                           )}
                           <div className="mt-3 flex gap-2">
-                              <button onClick={() => handleConfirm(req.id)} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-green-700 btn-press">Confirm Completion</button>
-                              <button onClick={() => handleDispute(req.id)} className="flex-1 bg-red-100 text-red-600 font-bold py-2 rounded-lg text-sm hover:bg-red-200 btn-press">Dispute</button>
+                              {currentUserId === req.student_id ? (
+                                <button onClick={() => handleConfirm(req.id)} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-green-700 btn-press">Confirm Completion</button>
+                              ) : (
+                                <div className="flex-1 bg-yellow-100 text-yellow-800 text-center font-bold py-2 rounded-lg text-sm">Waiting for Confirmation</div>
+                              )}
                           </div>
                       </div>
                   </div>
