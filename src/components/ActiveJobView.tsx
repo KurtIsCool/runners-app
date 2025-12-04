@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera, ExternalLink, X } from 'lucide-react';
+import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera, X } from 'lucide-react';
 import AppLogo from './AppLogo';
 import { type Request, type UserProfile, type RequestStatus } from '../types';
 import ChatBox from './ChatBox';
-import MapViewer from './MapViewer';
 import ProofUpload from './ProofUpload';
 import { supabase } from '../lib/supabase';
 
