@@ -1,5 +1,4 @@
 import { Plus } from 'lucide-react';
-import AppLogo from './AppLogo';
 import Marketplace from './Marketplace';
 import RequestTracker from './RequestTracker';
 import RunnerDashboard from './RunnerDashboard';
