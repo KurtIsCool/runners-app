@@ -76,13 +76,23 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose }: { 
              <div className="relative z-10 mt-4">
                <div className="flex justify-between items-center mb-1">
                    <span className="bg-blue-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">Active Mission</span>
-                   <div className="font-bold text-xl">₱{job.price_estimate}</div>
+                   <div className="text-right">
+                       <div className="font-bold text-xl">₱{job.price_estimate}</div>
+                       {job.item_cost !== undefined && <div className="text-[10px] text-blue-200">Collect ₱{job.price_estimate}</div>}
+                   </div>
                </div>
                <h2 className="text-xl font-bold capitalize mb-1">{job.type}</h2>
                <div className="flex items-center gap-2 text-blue-200 text-xs">
                    <span>Order for {studentName}</span>
                    <button onClick={() => setShowPayment(true)} className="ml-auto flex items-center gap-1 bg-blue-800 hover:bg-blue-700 px-2 py-0.5 rounded text-[10px] text-white btn-press"><QrCode size={10} /> GCash</button>
                </div>
+               {job.item_cost !== undefined && (
+                   <div className="mt-2 p-2 bg-blue-800/50 rounded-lg text-xs text-blue-100 border border-blue-700/50">
+                       <p className="font-bold mb-0.5">Payment Breakdown:</p>
+                       <div className="flex justify-between"><span>Purchase Items:</span> <span>₱{job.item_cost}</span></div>
+                       <div className="flex justify-between"><span>Service Fee:</span> <span>₱49</span></div>
+                   </div>
+               )}
              </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
@@ -140,6 +150,7 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose }: { 
              {job.status === 'purchasing' && <button disabled={updating} onClick={() => handleStatusUpdate('delivering')} className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold text-base hover:bg-purple-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-purple-200">{updating ? <Loader2 className="animate-spin"/> : <>Start Delivering <AppLogo className="h-5 w-5 text-white" /></>}</button>}
              {job.status === 'delivering' && <button disabled={updating} onClick={() => setShowProofUpload(true)} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-base hover:bg-green-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-green-200">{updating ? <Loader2 className="animate-spin"/> : <>Upload Proof & Finish <Camera size={18}/></>}</button>}
              {job.status === 'delivered' && <div className="w-full bg-yellow-100 text-yellow-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center">Waiting for Student Confirmation</div>}
+             {job.status === 'disputed' && <div className="w-full bg-red-100 text-red-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center animate-pulse">⚠️ Task Disputed. Contact Support.</div>}
              {job.status === 'completed' && <div className="w-full bg-green-100 text-green-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center"><CheckCircle/> Job Completed!</div>}
           </div>
         </div>

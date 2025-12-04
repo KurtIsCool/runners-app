@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, CheckCircle, DollarSign, Navigation, Star, X, Package, Copy, MessageCircle, Phone, MapPin, User as UserIcon, ShieldAlert } from 'lucide-react';
+import { Clock, CheckCircle, DollarSign, Navigation, Star, X, Package, Copy, MessageCircle, Phone, MapPin, User as UserIcon } from 'lucide-react';
 import { type Request, type RequestStatus } from '../types';
 import ChatBox from './ChatBox';
 import MapViewer from './MapViewer';
@@ -52,7 +52,7 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
           delivered: { color: 'bg-teal-100 text-teal-800', icon: CheckCircle, label: 'Delivered' },
           completed: { color: 'bg-green-100 text-green-800', icon: Star, label: 'Completed' },
           cancelled: { color: 'bg-red-100 text-red-800', icon: X, label: 'Cancelled' },
-          disputed: { color: 'bg-red-100 text-red-800', icon: ShieldAlert, label: 'Disputed' }
+          disputed: { color: 'bg-red-100 text-red-800', icon: X, label: 'Disputed' }
       }[status] || { color: 'bg-gray-100', icon: Clock, label: status };
       const Icon = config.icon;
       return <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${config.color}`}><Icon size={14} />{config.label}</div>;
@@ -68,8 +68,10 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
         if (error) alert('Error disputing request');
     };
 
+    // Treat 'disputed' as an active state requiring attention
     const activeRequests = requests.filter(r => r.status !== 'cancelled' && r.status !== 'completed');
-    const pastRequests = requests.filter(r => r.status === 'completed' || r.status === 'cancelled' || r.status === 'disputed').sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    // Removed 'disputed' from pastRequests to avoid duplication if it is in activeRequests
+    const pastRequests = requests.filter(r => r.status === 'completed' || r.status === 'cancelled').sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return (
       <div className="space-y-6 pb-24 animate-slide-up">
@@ -120,14 +122,26 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
                               </div>
                           )}
                           <div className="mt-3 flex gap-2">
-                              <button onClick={() => handleConfirm(req.id)} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-green-700 btn-press">Confirm Completion</button>
-                              <button onClick={() => handleDispute(req.id)} className="flex-1 bg-red-100 text-red-600 font-bold py-2 rounded-lg text-sm hover:bg-red-200 btn-press">Dispute</button>
+                              {currentUserId === req.student_id ? (
+                                <>
+                                    <button onClick={() => handleConfirm(req.id)} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-green-700 btn-press">Confirm</button>
+                                    <button onClick={() => handleDispute(req.id)} className="flex-1 bg-red-100 text-red-600 font-bold py-2 rounded-lg text-sm hover:bg-red-200 btn-press">Dispute</button>
+                                </>
+                              ) : (
+                                <div className="flex-1 bg-yellow-100 text-yellow-800 text-center font-bold py-2 rounded-lg text-sm">Waiting for Confirmation</div>
+                              )}
                           </div>
                       </div>
                   </div>
               )}
 
-              <div className="flex justify-between items-center"><div className="text-2xl font-bold text-gray-900">₱{req.price_estimate}</div>{req.status !== 'requested' && (<div className="flex gap-2"><button onClick={() => setChatRequestId(req.id)} className="flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-200 btn-press"><MessageCircle size={18} /> Chat</button><button className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 btn-press"><Phone size={18} /> Call</button></div>)}</div>
+              <div className="flex justify-between items-center">
+                  <div>
+                      <div className="text-2xl font-bold text-gray-900">₱{req.price_estimate}</div>
+                      {req.item_cost !== undefined && <div className="text-xs text-gray-500">Includes ₱{req.item_cost} Item + ₱49 Fee</div>}
+                  </div>
+                  {req.status !== 'requested' && (<div className="flex gap-2"><button onClick={() => setChatRequestId(req.id)} className="flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-200 btn-press"><MessageCircle size={18} /> Chat</button><button className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 btn-press"><Phone size={18} /> Call</button></div>)}
+              </div>
             </div>
             <div className="h-1.5 bg-gray-100 w-full">
                 <div className={`h-full transition-all duration-1000 ${

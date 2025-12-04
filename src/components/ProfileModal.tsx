@@ -49,6 +49,7 @@ const ProfileModal = ({ userProfile, onSave, onClose, readOnly = false }: Profil
     // Use role specific rating if available, else overall
     const ratingValue = isStudent ? userProfile.student_rating : (userProfile.runner_rating || userProfile.rating);
     const historyLabel = isStudent ? "Requests Made" : "Tasks Completed";
+    // We can cast AppLogo to match LucideIcon signature or just wrap it
     const HistoryIcon = isStudent ? Package : () => <AppLogo className="h-6 w-6 text-blue-500" />;
 
     return (
