@@ -56,7 +56,7 @@ const PaymentSection = ({ runnerId, requestId, amount, existingProof }: { runner
         const { error } = await supabase.from('requests').update({
             payment_proof_url: proofUrl,
             payment_ref: refNumber,
-            // We do NOT set is_paid to true here. Runner must confirm.
+            status: 'payment_review',
         }).eq('id', requestId);
 
         if (error) alert("Failed to submit payment");
@@ -147,6 +147,9 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
     const getStatusBadge = (status: RequestStatus) => {
       const config = {
           requested: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Waiting' },
+          pending_runner: { color: 'bg-indigo-100 text-indigo-800', icon: UserIcon, label: 'Runner Applied' },
+          awaiting_payment: { color: 'bg-blue-100 text-blue-800', icon: DollarSign, label: 'To Pay' },
+          payment_review: { color: 'bg-orange-100 text-orange-800', icon: Clock, label: 'Verifying' },
           accepted: { color: 'bg-blue-100 text-blue-800', icon: CheckCircle, label: 'Assigned' },
           purchasing: { color: 'bg-purple-100 text-purple-800', icon: DollarSign, label: 'Buying' },
           delivering: { color: 'bg-orange-100 text-orange-800', icon: Navigation, label: 'On the Way' },
@@ -205,8 +208,24 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
 
               <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-3"><div className="flex gap-3"><div className="mt-1"><MapPin size={16} className="text-red-500"/></div><div><div className="text-xs font-bold text-gray-500 uppercase">Pickup</div><div className="text-sm font-medium">{req.pickup_address}</div></div></div><div className="flex gap-3"><div className="mt-1"><Navigation size={16} className="text-green-500"/></div><div><div className="text-xs font-bold text-gray-500 uppercase">Dropoff</div><div className="text-sm font-medium">{req.dropoff_address}</div></div></div><div className="pt-2 mt-2 border-t border-gray-200"><div className="text-xs font-bold text-gray-500 uppercase mb-1">Details</div><p className="text-sm text-gray-700">{req.details}</p></div></div>
 
-              {/* Payment Section - Show if accepted and not yet confirmed paid */}
-              {req.status === 'accepted' && !req.is_paid && req.runner_id && (
+              {/* Pending Runner - Accept Section */}
+              {req.status === 'pending_runner' && req.runner_id && currentUserId === req.student_id && (
+                  <div className="mb-4 bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+                      <h4 className="font-bold text-indigo-900 text-sm mb-2 flex items-center gap-2"><UserIcon size={16}/> Runner Applied</h4>
+                      <p className="text-xs text-indigo-700 mb-4">A runner has offered to take this job. Do you want to accept them?</p>
+                      <button
+                          onClick={async () => {
+                              await supabase.from('requests').update({ status: 'awaiting_payment' }).eq('id', req.id);
+                          }}
+                          className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 btn-press"
+                      >
+                          Accept Runner
+                      </button>
+                  </div>
+              )}
+
+              {/* Payment Section */}
+              {(req.status === 'awaiting_payment' || req.status === 'payment_review') && req.runner_id && (
                   <div className="mb-4">
                       <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                           <h4 className="font-bold text-blue-900 text-sm mb-3 uppercase flex items-center gap-2"><DollarSign size={16}/> Payment Required</h4>
