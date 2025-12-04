@@ -1,6 +1,6 @@
 export type UserRole = 'student' | 'runner';
 // Added 'delivered' and 'disputed' to statuses
-export type RequestStatus = 'requested' | 'accepted' | 'purchasing' | 'delivering' | 'delivered' | 'completed' | 'cancelled' | 'disputed';
+export type RequestStatus = 'requested' | 'pending_runner' | 'awaiting_payment' | 'payment_review' | 'accepted' | 'purchasing' | 'delivering' | 'delivered' | 'completed' | 'cancelled' | 'disputed';
 
 export interface UserProfile {
   id: string;

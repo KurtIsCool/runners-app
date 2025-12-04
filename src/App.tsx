@@ -224,7 +224,8 @@ export default function App() {
   };
 
   const assignRequest = async (id: string, runnerId: string) => {
-    await supabase.from('requests').update({ runner_id: runnerId, status: 'accepted' }).eq('id', id);
+    // IMPORTANT: Set status to 'pending_runner' instead of 'accepted'
+    await supabase.from('requests').update({ runner_id: runnerId, status: 'pending_runner' }).eq('id', id);
   };
 
   const rateRequest = async (id: string, rating: number, comment?: string) => {

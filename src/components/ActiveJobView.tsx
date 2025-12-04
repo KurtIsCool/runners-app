@@ -39,13 +39,14 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
     const confirmPayment = async () => {
         if (!confirm("Confirm that you have received the payment?")) return;
         setVerifyingPayment(true);
-        const { error } = await supabase.from('requests').update({ is_paid: true }).eq('id', job.id);
+        // On confirm, we update is_paid AND ensure status is 'accepted' (active mission start)
+        const { error } = await supabase.from('requests').update({
+            is_paid: true,
+            status: 'accepted'
+        }).eq('id', job.id);
+
         if (error) {
             alert("Failed to confirm payment");
-        } else {
-            // Force local update or wait for subscription?
-            // Ideally parent updates, but we can't easily wait here.
-            // But usually AppContent updates via subscription.
         }
         setVerifyingPayment(false);
     };
@@ -127,9 +128,9 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
              </div>
 
              {/* Payment Verification Section */}
-             {job.status === 'accepted' && !job.is_paid && (
+             {(job.status === 'payment_review' || (job.status === 'accepted' && !job.is_paid)) && (
                 <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 animate-pulse">
-                    <h3 className="font-bold text-orange-800 text-sm mb-2 flex items-center gap-2"><CheckCircle size={16}/> Payment Required</h3>
+                    <h3 className="font-bold text-orange-800 text-sm mb-2 flex items-center gap-2"><CheckCircle size={16}/> Payment Verification</h3>
                     {job.payment_proof_url ? (
                         <div>
                             <p className="text-xs text-orange-700 mb-2">Student has submitted payment. Please verify.</p>

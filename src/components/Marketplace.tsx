@@ -33,6 +33,16 @@ const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, use
     // Exclude disputed jobs so runner is not blocked
     const myActiveJob = requests.find(r => r.runner_id === userId && r.status !== 'completed' && r.status !== 'cancelled' && r.status !== 'disputed');
 
+    // Helper to get banner content based on status
+    const getBannerContent = (status: RequestStatus) => {
+        switch (status) {
+            case 'pending_runner': return { title: 'Waiting for Approval', sub: 'Student is reviewing your offer' };
+            case 'awaiting_payment': return { title: 'Waiting for Payment', sub: 'Student needs to pay first' };
+            case 'payment_review': return { title: 'Payment Review', sub: 'Confirm receipt of payment' };
+            default: return { title: 'Mission in Progress', sub: 'Click to resume' };
+        }
+    };
+
     if (viewActiveJob && myActiveJob) {
         return <ActiveJobView job={myActiveJob} userId={userId} onUpdateStatus={onUpdateStatus} userProfile={userProfile} onClose={() => setViewActiveJob(false)} onRateUser={onRateUser} />;
     }
@@ -43,10 +53,13 @@ const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, use
       <div className="space-y-6 pb-24 animate-slide-up">
         {/* Banner for Active Job when minimized */}
         {myActiveJob && (
-            <div className="bg-blue-600 text-white p-4 rounded-xl flex items-center justify-between shadow-lg cursor-pointer hover:bg-blue-700 transition" onClick={() => setViewActiveJob(true)}>
+            <div className={`p-4 rounded-xl flex items-center justify-between shadow-lg cursor-pointer transition ${myActiveJob.status === 'pending_runner' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-blue-600 hover:bg-blue-700'} text-white`} onClick={() => setViewActiveJob(true)}>
                <div className="flex items-center gap-3">
                   <div className="bg-white/20 p-2 rounded-lg"><AppLogo className="h-5 w-5 animate-pulse text-white"/></div>
-                  <div><div className="font-bold text-sm">Mission in Progress</div><p className="text-xs text-blue-100">Click to resume</p></div>
+                  <div>
+                      <div className="font-bold text-sm">{getBannerContent(myActiveJob.status).title}</div>
+                      <p className="text-xs text-blue-100">{getBannerContent(myActiveJob.status).sub}</p>
+                  </div>
                </div>
                <ChevronRight />
             </div>
