@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera } from 'lucide-react';
+import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera, ExternalLink, X } from 'lucide-react';
 import AppLogo from './AppLogo';
 import { type Request, type UserProfile, type RequestStatus } from '../types';
 import ChatBox from './ChatBox';
@@ -7,12 +7,14 @@ import MapViewer from './MapViewer';
 import ProofUpload from './ProofUpload';
 import { supabase } from '../lib/supabase';
 
-const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose }: { job: Request, userId: string, onUpdateStatus: (id: string, status: RequestStatus) => void, userProfile: UserProfile, onClose: () => void }) => {
+const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRateUser }: { job: Request, userId: string, onUpdateStatus: (id: string, status: RequestStatus) => void, userProfile: UserProfile, onClose: () => void, onRateUser?: (req: Request) => void }) => {
     const [updating, setUpdating] = useState(false);
     const [showPayment, setShowPayment] = useState(false);
     const [studentName, setStudentName] = useState<string>('Student');
     const [proofUrl, setProofUrl] = useState<string | null>(job.proof_url || null);
     const [showProofUpload, setShowProofUpload] = useState(false);
+    const [verifyingPayment, setVerifyingPayment] = useState(false);
+    const [showPaymentProof, setShowPaymentProof] = useState(false);
 
     useEffect(() => {
         const fetchStudentName = async () => {
@@ -35,16 +37,25 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose }: { 
         }
     };
 
+    const confirmPayment = async () => {
+        if (!confirm("Confirm that you have received the payment?")) return;
+        setVerifyingPayment(true);
+        const { error } = await supabase.from('requests').update({ is_paid: true }).eq('id', job.id);
+        if (error) {
+            alert("Failed to confirm payment");
+        } else {
+            // Force local update or wait for subscription?
+            // Ideally parent updates, but we can't easily wait here.
+            // But usually AppContent updates via subscription.
+        }
+        setVerifyingPayment(false);
+    };
+
     const handleProofUpload = async (url: string) => {
         setProofUrl(url);
-        // Save proof url to supabase
         const { error } = await supabase.from('requests').update({ proof_url: url }).eq('id', job.id);
         if (error) {
             alert('Failed to save proof image');
-        } else {
-             // After upload, maybe move status to delivered?
-             // Or let user click "Mark Delivered" manually.
-             // But usually proof is part of delivery.
         }
     };
 
@@ -54,7 +65,6 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose }: { 
             return;
         }
         setUpdating(true);
-        // Update status to 'delivered' so student can confirm
         await onUpdateStatus(job.id, 'delivered');
         setShowProofUpload(false);
         setUpdating(false);
@@ -65,7 +75,6 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose }: { 
         {/* Left Side: Job Details */}
         <div className="w-full md:w-1/2 lg:w-1/3 bg-white flex flex-col border-r shadow-xl z-10 md:h-full order-1 h-[45vh]">
           <div className="bg-blue-900 text-white p-6 pb-6 relative overflow-hidden shrink-0">
-             {/* BACK BUTTON */}
              <div className="absolute top-4 right-4 z-20">
                <button onClick={onClose} className="bg-white/20 hover:bg-white/30 p-2 rounded-full backdrop-blur-sm transition-all">
                  <Minimize2 size={20} className="text-white"/>
@@ -86,13 +95,6 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose }: { 
                    <span>Order for {studentName}</span>
                    <button onClick={() => setShowPayment(true)} className="ml-auto flex items-center gap-1 bg-blue-800 hover:bg-blue-700 px-2 py-0.5 rounded text-[10px] text-white btn-press"><QrCode size={10} /> GCash</button>
                </div>
-               {job.item_cost !== undefined && (
-                   <div className="mt-2 p-2 bg-blue-800/50 rounded-lg text-xs text-blue-100 border border-blue-700/50">
-                       <p className="font-bold mb-0.5">Payment Breakdown:</p>
-                       <div className="flex justify-between"><span>Purchase Items:</span> <span>₱{job.item_cost}</span></div>
-                       <div className="flex justify-between"><span>Service Fee:</span> <span>₱49</span></div>
-                   </div>
-               )}
              </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
@@ -125,14 +127,22 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose }: { 
                 </div>
              </div>
 
-             {/* Map View */}
-             {(job.pickup_lat || job.dropoff_lat) && (
-                 <div className="mb-2">
-                      <MapViewer
-                         pickup={job.pickup_lat ? { lat: job.pickup_lat, lng: job.pickup_lng! } : undefined}
-                         dropoff={job.dropoff_lat ? { lat: job.dropoff_lat, lng: job.dropoff_lng! } : undefined}
-                      />
-                 </div>
+             {/* Payment Verification Section */}
+             {job.status === 'accepted' && !job.is_paid && (
+                <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 animate-pulse">
+                    <h3 className="font-bold text-orange-800 text-sm mb-2 flex items-center gap-2"><CheckCircle size={16}/> Payment Required</h3>
+                    {job.payment_proof_url ? (
+                        <div>
+                            <p className="text-xs text-orange-700 mb-2">Student has submitted payment. Please verify.</p>
+                            <button onClick={() => setShowPaymentProof(true)} className="w-full bg-white border border-orange-200 text-orange-700 font-bold py-2 rounded-lg text-xs mb-2 hover:bg-orange-100">View Receipt</button>
+                            <button onClick={confirmPayment} disabled={verifyingPayment} className="w-full bg-orange-600 text-white font-bold py-3 rounded-lg text-sm hover:bg-orange-700 btn-press">
+                                {verifyingPayment ? 'Verifying...' : 'Confirm Payment Received'}
+                            </button>
+                        </div>
+                    ) : (
+                        <p className="text-xs text-orange-700">Waiting for student to transfer payment...</p>
+                    )}
+                </div>
              )}
 
              <div className="grid grid-cols-1 gap-3 stagger-enter">
@@ -147,7 +157,6 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose }: { 
              </div>
              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 stagger-enter shadow-sm"><div className="text-[10px] font-bold text-blue-500 uppercase mb-1">Instructions</div><p className="text-gray-800 text-sm">{job.details}</p></div>
 
-             {/* Show proof if exists */}
              {proofUrl && (
                  <div className="bg-green-50 p-3 rounded-xl border border-green-100">
                      <p className="text-[10px] font-bold text-green-700 uppercase mb-2">Proof of Delivery Uploaded</p>
@@ -157,12 +166,29 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose }: { 
           </div>
 
           <div className="p-4 border-t bg-white pb-safe-nav shrink-0">
-             {job.status === 'accepted' && <button disabled={updating} onClick={() => handleStatusUpdate('purchasing')} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-base hover:bg-blue-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-blue-200">{updating ? <Loader2 className="animate-spin"/> : <>Start Purchasing <ArrowRight size={18}/></>}</button>}
+             {job.status === 'accepted' && (
+                 <button
+                    disabled={updating || !job.is_paid}
+                    onClick={() => handleStatusUpdate('purchasing')}
+                    className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-base hover:bg-blue-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                 >
+                    {updating ? <Loader2 className="animate-spin"/> : !job.is_paid ? 'Wait for Payment' : <>Start Purchasing <ArrowRight size={18}/></>}
+                 </button>
+             )}
              {job.status === 'purchasing' && <button disabled={updating} onClick={() => handleStatusUpdate('delivering')} className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold text-base hover:bg-purple-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-purple-200">{updating ? <Loader2 className="animate-spin"/> : <>Start Delivering <AppLogo className="h-5 w-5 text-white" /></>}</button>}
              {job.status === 'delivering' && <button disabled={updating} onClick={() => setShowProofUpload(true)} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-base hover:bg-green-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-green-200">{updating ? <Loader2 className="animate-spin"/> : <>Upload Proof & Finish <Camera size={18}/></>}</button>}
              {job.status === 'delivered' && <div className="w-full bg-yellow-100 text-yellow-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center">Waiting for Student Confirmation</div>}
              {job.status === 'disputed' && <div className="w-full bg-red-100 text-red-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center animate-pulse">⚠️ Task Disputed. Contact Support.</div>}
-             {job.status === 'completed' && <div className="w-full bg-green-100 text-green-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center"><CheckCircle/> Job Completed!</div>}
+             {job.status === 'completed' && (
+                 <div className="space-y-2">
+                     <div className="w-full bg-green-100 text-green-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center"><CheckCircle/> Job Completed!</div>
+                     {!job.student_rating && onRateUser && (
+                         <button onClick={() => onRateUser(job)} className="w-full bg-black text-white py-3 rounded-xl font-bold text-base hover:bg-gray-800 flex items-center justify-center gap-2 btn-press">
+                             <Star size={18} className="text-yellow-400 fill-yellow-400"/> Rate Student
+                         </button>
+                     )}
+                 </div>
+             )}
           </div>
         </div>
 
@@ -190,6 +216,16 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose }: { 
                 <button onClick={() => setShowPayment(false)} className="w-full bg-gray-200 py-3 rounded-lg font-bold hover:bg-gray-300 btn-press">Close</button>
              </div>
           </div>
+        )}
+
+        {showPaymentProof && job.payment_proof_url && (
+             <div className="absolute inset-0 z-[75] bg-black flex items-center justify-center p-4" onClick={() => setShowPaymentProof(false)}>
+                 <div className="relative max-w-full max-h-full">
+                     <img src={job.payment_proof_url} alt="Payment Receipt" className="max-w-full max-h-[90vh] object-contain rounded-lg" />
+                     {job.payment_ref && <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm font-mono">Ref: {job.payment_ref}</div>}
+                     <button className="absolute -top-12 right-0 text-white p-2"><X/></button>
+                 </div>
+             </div>
         )}
 
         {showProofUpload && (

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Clock, CheckCircle, DollarSign, Navigation, Star, X, Package, Copy, MessageCircle, Phone, MapPin, User as UserIcon } from 'lucide-react';
-import { type Request, type RequestStatus } from '../types';
+import { Clock, CheckCircle, DollarSign, Navigation, Star, X, Package, Copy, MessageCircle, Phone, MapPin, User as UserIcon, QrCode, Upload } from 'lucide-react';
+import { type Request, type RequestStatus, type UserProfile } from '../types';
 import ChatBox from './ChatBox';
 import MapViewer from './MapViewer';
+import PaymentUpload from './PaymentUpload';
 import { copyToClipboard } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 
@@ -31,6 +32,106 @@ const RunnerInfo = ({ runnerId, onClick }: { runnerId?: string, onClick?: (id: s
         </button>
     );
 }
+
+const PaymentSection = ({ runnerId, requestId, amount, existingProof }: { runnerId: string, requestId: string, amount: number, existingProof?: string }) => {
+    const [runnerProfile, setRunnerProfile] = useState<UserProfile | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [refNumber, setRefNumber] = useState('');
+    const [proofUrl, setProofUrl] = useState<string | null>(existingProof || null);
+
+    useEffect(() => {
+        const fetchRunner = async () => {
+            const { data } = await supabase.from('users').select('*').eq('id', runnerId).single();
+            if (data) setRunnerProfile(data);
+        };
+        fetchRunner();
+    }, [runnerId]);
+
+    const handleSubmit = async () => {
+        if (!proofUrl || !refNumber) {
+            alert("Please upload receipt and enter reference number.");
+            return;
+        }
+        setUploading(true);
+        const { error } = await supabase.from('requests').update({
+            payment_proof_url: proofUrl,
+            payment_ref: refNumber,
+            // We do NOT set is_paid to true here. Runner must confirm.
+        }).eq('id', requestId);
+
+        if (error) alert("Failed to submit payment");
+        else alert("Payment submitted! Waiting for runner confirmation.");
+        setUploading(false);
+    };
+
+    if (!runnerProfile) return <div className="p-4 text-center"><span className="loading loading-spinner"></span> Loading Payment Details...</div>;
+
+    return (
+        <div className="bg-white rounded-xl p-4 border border-blue-200 shadow-sm">
+            <div className="flex flex-col md:flex-row gap-6">
+                <div className="flex-1 space-y-3 text-center md:text-left">
+                    <div className="bg-gray-100 rounded-xl p-3 inline-block mx-auto md:mx-0">
+                         {runnerProfile.payment_qr_url ? (
+                             <img src={runnerProfile.payment_qr_url} alt="QR Code" className="w-32 h-32 object-contain bg-white rounded-lg" />
+                         ) : (
+                             <div className="w-32 h-32 flex flex-col items-center justify-center text-gray-400">
+                                 <QrCode size={32} />
+                                 <span className="text-[10px] mt-1">No QR</span>
+                             </div>
+                         )}
+                    </div>
+                    <div>
+                        <div className="text-xs text-gray-500 uppercase font-bold">GCash Name</div>
+                        <div className="font-bold text-gray-900">{runnerProfile.name}</div>
+                    </div>
+                    <div>
+                         <div className="text-xs text-gray-500 uppercase font-bold">GCash Number</div>
+                         <div className="flex items-center justify-center md:justify-start gap-2">
+                             <div className="font-mono bg-gray-100 px-2 py-1 rounded text-sm">{runnerProfile.payment_number || runnerProfile.phone || 'N/A'}</div>
+                             <button onClick={() => copyToClipboard(runnerProfile.payment_number || runnerProfile.phone || '')} className="text-blue-600 p-1 hover:bg-blue-50 rounded"><Copy size={12}/></button>
+                         </div>
+                    </div>
+                </div>
+
+                <div className="flex-1 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 space-y-4">
+                     <div>
+                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Total Amount</label>
+                         <div className="text-2xl font-black text-blue-600">₱{amount.toFixed(2)}</div>
+                     </div>
+
+                     {existingProof ? (
+                         <div className="bg-green-50 p-3 rounded-xl border border-green-100 text-center">
+                             <CheckCircle className="mx-auto text-green-600 mb-1" size={24}/>
+                             <p className="font-bold text-green-800 text-sm">Payment Submitted</p>
+                             <p className="text-xs text-green-600">Waiting for runner confirmation</p>
+                         </div>
+                     ) : (
+                        <>
+                            <PaymentUpload onUpload={setProofUrl} currentUrl={proofUrl || undefined} />
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Reference No.</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. 1234 5678 9012"
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500"
+                                    value={refNumber}
+                                    onChange={(e) => setRefNumber(e.target.value)}
+                                />
+                            </div>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={uploading || !proofUrl || !refNumber}
+                                className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed btn-press"
+                            >
+                                {uploading ? 'Submitting...' : 'Submit Payment'}
+                            </button>
+                        </>
+                     )}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 interface RequestTrackerProps {
     requests: Request[];
@@ -71,7 +172,6 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
     };
 
     const activeRequests = requests.filter(r => r.status !== 'cancelled' && r.status !== 'completed');
-    // Removed 'disputed' from pastRequests to avoid duplication if it is in activeRequests
     const pastRequests = requests.filter(r => r.status === 'completed' || r.status === 'cancelled').sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return (
@@ -104,6 +204,17 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
               )}
 
               <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-3"><div className="flex gap-3"><div className="mt-1"><MapPin size={16} className="text-red-500"/></div><div><div className="text-xs font-bold text-gray-500 uppercase">Pickup</div><div className="text-sm font-medium">{req.pickup_address}</div></div></div><div className="flex gap-3"><div className="mt-1"><Navigation size={16} className="text-green-500"/></div><div><div className="text-xs font-bold text-gray-500 uppercase">Dropoff</div><div className="text-sm font-medium">{req.dropoff_address}</div></div></div><div className="pt-2 mt-2 border-t border-gray-200"><div className="text-xs font-bold text-gray-500 uppercase mb-1">Details</div><p className="text-sm text-gray-700">{req.details}</p></div></div>
+
+              {/* Payment Section - Show if accepted and not yet confirmed paid */}
+              {req.status === 'accepted' && !req.is_paid && req.runner_id && (
+                  <div className="mb-4">
+                      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                          <h4 className="font-bold text-blue-900 text-sm mb-3 uppercase flex items-center gap-2"><DollarSign size={16}/> Payment Required</h4>
+                          <p className="text-xs text-blue-700 mb-4">Please pay the total amount to the runner via GCash to start the task. Upload the receipt below.</p>
+                          <PaymentSection runnerId={req.runner_id} requestId={req.id} amount={req.price_estimate} existingProof={req.payment_proof_url} />
+                      </div>
+                  </div>
+              )}
 
               {/* Proof of Delivery Section */}
               {req.status === 'delivered' && (

@@ -10,6 +10,11 @@ ALTER TABLE requests ADD COLUMN IF NOT EXISTS student_rating FLOAT; -- Rating gi
 ALTER TABLE requests ADD COLUMN IF NOT EXISTS runner_comment TEXT;
 ALTER TABLE requests ADD COLUMN IF NOT EXISTS student_comment TEXT;
 
+-- Payment Flow Columns
+ALTER TABLE requests ADD COLUMN IF NOT EXISTS payment_proof_url TEXT;
+ALTER TABLE requests ADD COLUMN IF NOT EXISTS payment_ref TEXT;
+ALTER TABLE requests ADD COLUMN IF NOT EXISTS is_paid BOOLEAN DEFAULT FALSE;
+
 -- Update status check constraint if it exists (Supabase/Postgres enum handling depends on setup, often just text check)
 -- If status is an enum type:
 -- ALTER TYPE request_status ADD VALUE 'delivered';
@@ -23,5 +28,6 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS rating FLOAT DEFAULT 0; -- Overall av
 ALTER TABLE users ADD COLUMN IF NOT EXISTS student_rating FLOAT DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS runner_rating FLOAT DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS total_reviews INTEGER DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS payment_number TEXT; -- For GCash Number backup
 
 -- Function to update user rating on request update could be added here as a trigger

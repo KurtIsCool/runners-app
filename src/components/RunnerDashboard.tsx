@@ -22,7 +22,7 @@ const StudentInfo = ({ studentId, onClick }: { studentId: string, onClick?: (id:
     );
 }
 
-const RunnerDashboard = ({ requests, userId, onViewProfile }: { requests: Request[], userId: string, onViewProfile?: (userId: string) => void }) => {
+const RunnerDashboard = ({ requests, userId, onViewProfile, onRateUser }: { requests: Request[], userId: string, onViewProfile?: (userId: string) => void, onRateUser?: (req: Request) => void }) => {
     const completed = requests.filter(r => r.runner_id === userId && r.status === 'completed');
     const disputed = requests.filter(r => r.runner_id === userId && r.status === 'disputed');
 
@@ -108,6 +108,13 @@ const RunnerDashboard = ({ requests, userId, onViewProfile }: { requests: Reques
                          <span className="text-xs text-gray-400 italic">No rating</span>
                       )}
                    </div>
+
+                   {!job.student_rating && onRateUser && (
+                       <button onClick={() => onRateUser(job)} className="mt-3 w-full bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-bold hover:bg-gray-200 btn-press">
+                          Rate Student
+                       </button>
+                   )}
+
                    {/* Show Proof thumbnail if exists */}
                    {job.proof_url && (
                      <div className="mt-2 pt-2 border-t border-gray-50">
