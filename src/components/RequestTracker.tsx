@@ -63,6 +63,13 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
         if (error) alert('Error confirming request');
     };
 
+    const handleDispute = async (id: string) => {
+        const reason = window.prompt("Please state the reason for the dispute (e.g. Items missing, Wrong items):");
+        if (reason === null) return; // Cancelled
+        const { error } = await supabase.from('requests').update({ status: 'disputed', student_comment: reason }).eq('id', id);
+        if (error) alert('Error disputing request');
+    };
+
     const activeRequests = requests.filter(r => r.status !== 'cancelled' && r.status !== 'completed');
     // Removed 'disputed' from pastRequests to avoid duplication if it is in activeRequests
     const pastRequests = requests.filter(r => r.status === 'completed' || r.status === 'cancelled').sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -117,7 +124,10 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
                           )}
                           <div className="mt-3 flex gap-2">
                               {currentUserId === req.student_id ? (
-                                <button onClick={() => handleConfirm(req.id)} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-green-700 btn-press">Confirm Completion</button>
+                                <>
+                                    <button onClick={() => handleConfirm(req.id)} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-green-700 btn-press">Confirm Completion</button>
+                                    <button onClick={() => handleDispute(req.id)} className="px-4 bg-red-100 text-red-700 font-bold py-2 rounded-lg text-sm hover:bg-red-200 btn-press">Dispute</button>
+                                </>
                               ) : (
                                 <div className="flex-1 bg-yellow-100 text-yellow-800 text-center font-bold py-2 rounded-lg text-sm">Waiting for Confirmation</div>
                               )}

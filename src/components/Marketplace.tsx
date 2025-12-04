@@ -30,7 +30,8 @@ const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, use
     const [viewActiveJob, setViewActiveJob] = useState(false);
     const handleRefresh = async () => { setIsRefreshing(true); await onRefresh(); setTimeout(() => setIsRefreshing(false), 500); };
 
-    const myActiveJob = requests.find(r => r.runner_id === userId && r.status !== 'completed' && r.status !== 'cancelled');
+    // Exclude disputed jobs so runner is not blocked
+    const myActiveJob = requests.find(r => r.runner_id === userId && r.status !== 'completed' && r.status !== 'cancelled' && r.status !== 'disputed');
 
     if (viewActiveJob && myActiveJob) {
         return <ActiveJobView job={myActiveJob} userId={userId} onUpdateStatus={onUpdateStatus} userProfile={userProfile} onClose={() => setViewActiveJob(false)} />;

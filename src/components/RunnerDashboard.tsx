@@ -24,6 +24,8 @@ const StudentInfo = ({ studentId, onClick }: { studentId: string, onClick?: (id:
 
 const RunnerDashboard = ({ requests, userId, onViewProfile }: { requests: Request[], userId: string, onViewProfile?: (userId: string) => void }) => {
     const completed = requests.filter(r => r.runner_id === userId && r.status === 'completed');
+    const disputed = requests.filter(r => r.runner_id === userId && r.status === 'disputed');
+
     const earnings = completed.reduce((sum, r) => sum + (r.price_estimate || 0), 0);
     // Use runner_rating if available, fallback to legacy rating
     const ratedJobs = completed.filter(r => r.runner_rating || r.rating);
@@ -35,6 +37,33 @@ const RunnerDashboard = ({ requests, userId, onViewProfile }: { requests: Reques
           <div className="bg-gradient-to-br from-blue-600 to-indigo-800 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group hover-lift"><div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl animate-blob"></div><p className="text-blue-200 text-xs font-bold uppercase tracking-wider mb-1">Total Earnings</p><h3 className="text-3xl font-bold tracking-tight">₱{earnings.toFixed(2)}</h3></div>
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col justify-center hover-lift"><div className="flex items-center gap-2 mb-1"><Star className="text-yellow-400 fill-yellow-400" size={16} /><p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Rating</p></div><h3 className="text-3xl font-bold text-gray-900">{avgRating}</h3></div>
         </div>
+
+        {disputed.length > 0 && (
+          <div className="bg-red-50 rounded-3xl shadow-sm border border-red-100 overflow-hidden stagger-enter">
+            <div className="p-6 border-b border-red-100 flex justify-between items-center"><h3 className="font-bold text-red-800 text-lg">Action Required / Disputed</h3><span className="text-xs font-medium text-red-500">{disputed.length} Jobs</span></div>
+            <div className="p-4 space-y-3">
+              {disputed.map((job, i) => (
+                <div key={job.id} style={{animationDelay: `${i*50}ms`}} className="stagger-enter bg-white p-4 rounded-2xl shadow-sm border border-red-200 hover:shadow-md transition-all">
+                   <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                         <div className="p-2.5 rounded-xl bg-red-100 text-red-600">⚠️</div>
+                         <div>
+                            <h4 className="font-bold text-gray-900 capitalize">{job.type} - Disputed</h4>
+                            <p className="text-xs text-gray-500 mb-1">{new Date(job.created_at).toLocaleDateString()}</p>
+                            <StudentInfo studentId={job.student_id} onClick={onViewProfile} />
+                         </div>
+                      </div>
+                      <span className="font-black text-gray-400 bg-gray-100 px-3 py-1 rounded-lg text-sm">₱{job.price_estimate}</span>
+                   </div>
+                   <div className="bg-red-50 p-2 rounded text-red-800 text-xs mb-2">
+                     <strong>Status:</strong> Student marked as Disputed. Please contact support or the student.
+                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden stagger-enter" style={{animationDelay: '0.1s'}}>
           <div className="p-6 border-b border-gray-50 flex justify-between items-center"><h3 className="font-bold text-gray-800 text-lg">Work History</h3><span className="text-xs font-medium text-gray-400">{completed.length} Jobs</span></div>
           {completed.length === 0 ? (

@@ -102,12 +102,23 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose }: { 
                    <div className="absolute top-3 left-0 w-full h-0.5 bg-gray-100 -z-10"></div>
                    {[{s: 'accepted', icon: CheckCircle, label: 'Accepted'},{s: 'purchasing', icon: ShoppingBag, label: 'Buying'},{s: 'delivering', icon: () => <AppLogo className="h-3 w-3" />, label: 'Delivery'},{s: 'delivered', icon: Camera, label: 'Delivered'}, {s: 'completed', icon: Star, label: 'Done'}].map((step, idx) => {
                       const isActive = step.s === job.status;
-                      const isPast = ['accepted', 'purchasing', 'delivering', 'delivered', 'completed'].indexOf(job.status) >= idx;
+                      // Handle disputed status visually in the stepper (treat as not past, or handle specially if needed)
+                      // If disputed, we might want to show everything up to delivered as "past" but maybe red?
+                      // For now, let's just make sure it doesn't break.
+                      // If status is 'disputed', indexOf returns -1, so isPast is false for all.
+                      // Let's modify logic: if disputed, we assume it went through the process up to delivered usually.
+                      const statusList = ['accepted', 'purchasing', 'delivering', 'delivered', 'completed'];
+                      let currentIdx = statusList.indexOf(job.status);
+                      if (job.status === 'disputed') currentIdx = 3; // Assume it was at least delivered to be disputed
+
+                      const isPast = currentIdx >= idx;
+                      const isDisputed = job.status === 'disputed';
+
                       const Icon = step.icon;
                       return (
                         <div key={step.s} className="flex flex-col items-center">
-                           <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isActive ? 'bg-blue-600 border-blue-600 text-white scale-125 shadow-lg' : isPast ? 'bg-blue-100 border-blue-600 text-blue-600' : 'bg-white border-gray-200 text-gray-200'}`}><Icon size={12} /></div>
-                           <span className={`text-[9px] mt-1 font-bold ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>{step.label}</span>
+                           <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isActive ? 'bg-blue-600 border-blue-600 text-white scale-125 shadow-lg' : isPast ? (isDisputed ? 'bg-red-100 border-red-400 text-red-500' : 'bg-blue-100 border-blue-600 text-blue-600') : 'bg-white border-gray-200 text-gray-200'}`}><Icon size={12} /></div>
+                           <span className={`text-[9px] mt-1 font-bold ${isActive ? 'text-blue-600' : isPast ? (isDisputed ? 'text-red-400' : 'text-blue-600') : 'text-gray-400'}`}>{step.label}</span>
                         </div>
                       )
                    })}
