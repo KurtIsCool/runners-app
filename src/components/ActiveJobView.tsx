@@ -102,53 +102,56 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
                 <div className="text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-wide">Current Status</div>
                 <div className="flex items-center justify-between relative px-2">
                    <div className="absolute top-3 left-0 w-full h-0.5 bg-gray-100 -z-10"></div>
-                   {[{s: 'accepted', icon: CheckCircle, label: 'Accepted'},{s: 'purchasing', icon: ShoppingBag, label: 'Buying'},{s: 'delivering', icon: () => <AppLogo className="h-3 w-3" />, label: 'Delivery'},{s: 'delivered', icon: Camera, label: 'Delivered'}, {s: 'completed', icon: Star, label: 'Done'}].map((step, idx) => {
-                      const isActive = step.s === job.status;
-                      // Handle disputed status visually in the stepper (treat as not past, or handle specially if needed)
-                      // If disputed, we might want to show everything up to delivered as "past" but maybe red?
-                      // For now, let's just make sure it doesn't break.
-                      // If status is 'disputed', indexOf returns -1, so isPast is false for all.
-                      // Let's modify logic: if disputed, we assume it went through the process up to delivered usually.
-                      const statusList = ['accepted', 'purchasing', 'delivering', 'delivered', 'completed'];
-                      let currentIdx = statusList.indexOf(job.status);
-                      if (job.status === 'disputed') currentIdx = 3; // Assume it was at least delivered to be disputed
-
-                      const isPast = currentIdx >= idx;
-                      const isDisputed = job.status === 'disputed';
-
-                      const Icon = step.icon;
-                      return (
-                        <div key={step.s} className="flex flex-col items-center">
-                           <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isActive ? 'bg-blue-600 border-blue-600 text-white scale-125 shadow-lg' : isPast ? (isDisputed ? 'bg-red-100 border-red-400 text-red-500' : 'bg-blue-100 border-blue-600 text-blue-600') : 'bg-white border-gray-200 text-gray-200'}`}><Icon size={12} /></div>
-                           <span className={`text-[9px] mt-1 font-bold ${isActive ? 'text-blue-600' : isPast ? (isDisputed ? 'text-red-400' : 'text-blue-600') : 'text-gray-400'}`}>{step.label}</span>
+                   {/* If status is pending_runner or awaiting_payment, show a pre-stepper or simplified stepper */}
+                   {['pending_runner', 'awaiting_payment', 'payment_review'].includes(job.status) ? (
+                        <div className="flex items-center justify-center w-full py-2">
+                            <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
+                                {job.status === 'pending_runner' && "Waiting for Approval"}
+                                {job.status === 'awaiting_payment' && "Waiting for Payment"}
+                                {job.status === 'payment_review' && "Verifying Payment"}
+                            </span>
                         </div>
-                      )
-                   })}
+                   ) : (
+                       [{s: 'accepted', icon: CheckCircle, label: 'Accepted'},{s: 'purchasing', icon: ShoppingBag, label: 'Buying'},{s: 'delivering', icon: () => <AppLogo className="h-3 w-3" />, label: 'Delivery'},{s: 'delivered', icon: Camera, label: 'Delivered'}, {s: 'completed', icon: Star, label: 'Done'}].map((step, idx) => {
+                          const isActive = step.s === job.status;
+                          const statusList = ['accepted', 'purchasing', 'delivering', 'delivered', 'completed'];
+                          let currentIdx = statusList.indexOf(job.status);
+                          if (job.status === 'disputed') currentIdx = 3;
+
+                          const isPast = currentIdx >= idx;
+                          const isDisputed = job.status === 'disputed';
+
+                          const Icon = step.icon;
+                          return (
+                            <div key={step.s} className="flex flex-col items-center">
+                               <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isActive ? 'bg-blue-600 border-blue-600 text-white scale-125 shadow-lg' : isPast ? (isDisputed ? 'bg-red-100 border-red-400 text-red-500' : 'bg-blue-100 border-blue-600 text-blue-600') : 'bg-white border-gray-200 text-gray-200'}`}><Icon size={12} /></div>
+                               <span className={`text-[9px] mt-1 font-bold ${isActive ? 'text-blue-600' : isPast ? (isDisputed ? 'text-red-400' : 'text-blue-600') : 'text-gray-400'}`}>{step.label}</span>
+                            </div>
+                          )
+                       })
+                   )}
                 </div>
              </div>
+
+             {/* Pre-Active States (Waiting for Approval/Payment) */}
+             {job.status === 'pending_runner' && (
+                 <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+                     <p className="text-sm text-indigo-800 text-center font-bold">You have applied for this job.</p>
+                     <p className="text-xs text-indigo-600 text-center mt-1">Waiting for the student to accept your offer.</p>
+                 </div>
+             )}
+
+             {job.status === 'awaiting_payment' && (
+                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                     <p className="text-sm text-blue-800 text-center font-bold">Offer Accepted!</p>
+                     <p className="text-xs text-blue-600 text-center mt-1">Waiting for the student to send payment (₱{job.price_estimate}).</p>
+                 </div>
+             )}
 
              {/* Payment Verification Section */}
              {(job.status === 'payment_review' || (job.status === 'accepted' && !job.is_paid)) && (
                 <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 animate-pulse">
                     <h3 className="font-bold text-orange-800 text-sm mb-2 flex items-center gap-2"><CheckCircle size={16}/> Payment Verification</h3>
-                    {job.payment_proof_url ? (
-                        <div>
-                            <p className="text-xs text-orange-700 mb-2">Student has submitted payment. Please verify.</p>
-                            <button onClick={() => setShowPaymentProof(true)} className="w-full bg-white border border-orange-200 text-orange-700 font-bold py-2 rounded-lg text-xs mb-2 hover:bg-orange-100">View Receipt</button>
-                            <button onClick={confirmPayment} disabled={verifyingPayment} className="w-full bg-orange-600 text-white font-bold py-3 rounded-lg text-sm hover:bg-orange-700 btn-press">
-                                {verifyingPayment ? 'Verifying...' : 'Confirm Payment Received'}
-                            </button>
-                        </div>
-                    ) : (
-                        <p className="text-xs text-orange-700">Waiting for student to transfer payment...</p>
-                    )}
-                </div>
-             )}
-
-             {/* Payment Verification Section */}
-             {job.status === 'accepted' && !job.is_paid && (
-                <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 animate-pulse">
-                    <h3 className="font-bold text-orange-800 text-sm mb-2 flex items-center gap-2"><CheckCircle size={16}/> Payment Required</h3>
                     {job.payment_proof_url ? (
                         <div>
                             <p className="text-xs text-orange-700 mb-2">Student has submitted payment. Please verify.</p>
