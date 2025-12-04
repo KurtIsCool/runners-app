@@ -15,8 +15,8 @@ ALTER TABLE requests ADD COLUMN IF NOT EXISTS student_comment TEXT;
 -- ALTER TYPE request_status ADD VALUE 'delivered';
 -- ALTER TYPE request_status ADD VALUE 'disputed';
 -- If status is text with check constraint:
--- ALTER TABLE requests DROP CONSTRAINT IF EXISTS requests_status_check;
--- ALTER TABLE requests ADD CONSTRAINT requests_status_check CHECK (status IN ('requested', 'accepted', 'purchasing', 'delivering', 'delivered', 'completed', 'cancelled', 'disputed'));
+ALTER TABLE requests DROP CONSTRAINT IF EXISTS requests_status_check;
+ALTER TABLE requests ADD CONSTRAINT requests_status_check CHECK (status IN ('requested', 'accepted', 'purchasing', 'delivering', 'delivered', 'completed', 'cancelled', 'disputed'));
 
 -- Add columns to users table for aggregated ratings if you want to store them
 ALTER TABLE users ADD COLUMN IF NOT EXISTS rating FLOAT DEFAULT 0; -- Overall average
