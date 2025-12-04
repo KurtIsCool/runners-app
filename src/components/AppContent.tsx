@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react';
+import AppLogo from './AppLogo';
 import Marketplace from './Marketplace';
 import RequestTracker from './RequestTracker';
 import RunnerDashboard from './RunnerDashboard';
@@ -102,6 +103,7 @@ export default function AppContent({
           onRefresh={fetchRequests}
           userProfile={userProfile!}
           onViewProfile={setShowPublicProfileModal}
+          onRateUser={setShowRatingModal}
         />
       );
     }
@@ -124,7 +126,12 @@ export default function AppContent({
   if (view === 'dashboard') {
     return (
       <div className="max-w-3xl mx-auto">
-        <RunnerDashboard requests={requests} userId={currentUserId} onViewProfile={setShowPublicProfileModal} />
+        <RunnerDashboard
+          requests={requests}
+          userId={currentUserId}
+          onViewProfile={setShowPublicProfileModal}
+          onRateUser={setShowRatingModal}
+        />
       </div>
     );
   }

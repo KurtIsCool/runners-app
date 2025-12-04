@@ -11,6 +11,7 @@ export interface UserProfile {
   is_verified?: boolean;
   school_id_url?: string;
   payment_qr_url?: string;
+  payment_number?: string; // GCash Number
   avatar_url?: string;
   // New fields
   history?: string[]; // Array of request IDs or simple summary (we might not store this in user row, but useful for frontend cache)
@@ -53,6 +54,11 @@ export interface Request {
   // Proof & Completion
   proof_url?: string;
   confirmed_at?: string;
+
+  // Payment
+  payment_proof_url?: string;
+  payment_ref?: string;
+  is_paid?: boolean;
 
   // Ratings
   rating?: number; // keeping for backward compat, maybe alias to runner_rating
