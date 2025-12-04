@@ -67,7 +67,10 @@ const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, use
                             <span className="text-xs text-gray-400 block mt-0.5">{new Date(req.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                         </div>
                     </div>
-                    <div className="font-bold text-xl text-green-600 mt-6">₱{req.price_estimate}</div>
+                    <div className="mt-6 text-right">
+                        <div className="font-bold text-xl text-green-600">₱{req.price_estimate}</div>
+                        {req.item_cost !== undefined && <div className="text-[10px] text-gray-400">Items: ₱{req.item_cost}</div>}
+                    </div>
                 </div>
                 <div className="space-y-2 mb-6 border-l-2 border-gray-100 pl-3"><div className="text-sm text-gray-600 truncate"><span className="font-bold text-xs uppercase text-gray-400 mr-2">From</span> {req.pickup_address}</div><div className="text-sm text-gray-600 truncate"><span className="font-bold text-xs uppercase text-gray-400 mr-2">To</span> {req.dropoff_address}</div></div>
                 <button

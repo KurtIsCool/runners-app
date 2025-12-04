@@ -127,7 +127,13 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
                   </div>
               )}
 
-              <div className="flex justify-between items-center"><div className="text-2xl font-bold text-gray-900">₱{req.price_estimate}</div>{req.status !== 'requested' && (<div className="flex gap-2"><button onClick={() => setChatRequestId(req.id)} className="flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-200 btn-press"><MessageCircle size={18} /> Chat</button><button className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 btn-press"><Phone size={18} /> Call</button></div>)}</div>
+              <div className="flex justify-between items-center">
+                  <div>
+                      <div className="text-2xl font-bold text-gray-900">₱{req.price_estimate}</div>
+                      {req.item_cost !== undefined && <div className="text-xs text-gray-500">Includes ₱{req.item_cost} Item + ₱49 Fee</div>}
+                  </div>
+                  {req.status !== 'requested' && (<div className="flex gap-2"><button onClick={() => setChatRequestId(req.id)} className="flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-200 btn-press"><MessageCircle size={18} /> Chat</button><button className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 btn-press"><Phone size={18} /> Call</button></div>)}
+              </div>
             </div>
             <div className="h-1.5 bg-gray-100 w-full">
                 <div className={`h-full transition-all duration-1000 ${

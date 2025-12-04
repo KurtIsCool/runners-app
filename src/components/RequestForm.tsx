@@ -27,12 +27,13 @@ type LocationMode = 'pickup' | 'dropoff' | null;
 
 const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState<RequestFormData>({
+    const [formData, setFormData] = useState<RequestFormData & { item_cost: string }>({
       type: 'food',
       pickup_address: '',
       dropoff_address: '',
       details: '',
-      price_estimate: 49, // Fixed price as per request
+      price_estimate: 49,
+      item_cost: '', // Input as string for better UX (handling empty state)
       pickup_lat: 0,
       pickup_lng: 0,
       dropoff_lat: 0,
@@ -44,10 +45,15 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setLoading(true);
-      // Pass the data in the format expected by App.tsx (even though we are updating App.tsx later, let's align with new types)
+
+      const itemCost = parseFloat(formData.item_cost) || 0;
+      const fixedFee = 49;
+      const total = itemCost + fixedFee;
+
       await onSubmit({
         ...formData,
-        // Compatibility with legacy single point if needed, or just new fields
+        item_cost: itemCost,
+        price_estimate: total, // Total = Item + Fee
         lat: formData.pickup_lat,
         lng: formData.pickup_lng
       });
@@ -154,15 +160,41 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
               <textarea required rows={2} placeholder="Add details (e.g. 'No pickles')..." className="w-full px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium text-gray-700 resize-none" value={formData.details} onChange={(e) => setFormData({...formData, details: e.target.value})}/>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-4 rounded-xl flex items-center justify-between shadow-lg shadow-blue-600/20 text-white">
-              <div>
-                <span className="block text-xs font-bold text-blue-100">Runner Fee</span>
-                <span className="text-[10px] text-blue-200">Fixed rate</span>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Task Cost (Est.)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-gray-500 font-bold text-sm">₱</span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  required
+                  className="w-full pl-7 pr-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all text-sm font-bold text-gray-900"
+                  value={formData.item_cost}
+                  onChange={(e) => setFormData({...formData, item_cost: e.target.value})}
+                />
               </div>
-              <div className="flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-lg backdrop-blur-md border border-white/20">
-                <span className="text-blue-100 font-bold text-sm">₱</span>
-                {/* Fixed Price is read-only now */}
-                <span className="text-xl font-black text-white">{formData.price_estimate}</span>
+              <p className="text-[10px] text-gray-400 mt-1 ml-1">Price of items/service to be purchased.</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-4 rounded-xl shadow-lg shadow-blue-600/20 text-white">
+              <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/10">
+                <span className="text-xs text-blue-100">Task Cost</span>
+                <span className="font-bold">₱{parseFloat(formData.item_cost || '0').toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/10">
+                <span className="text-xs text-blue-100">Service Fee</span>
+                <span className="font-bold">₱49.00</span>
+              </div>
+              <div className="flex justify-between items-center pt-1">
+                 <div>
+                    <span className="block text-xs font-bold text-blue-100 uppercase tracking-wide">Total Price</span>
+                    <span className="text-[10px] text-blue-200">Pay to Runner</span>
+                 </div>
+                 <div className="flex items-center gap-0.5">
+                    <span className="text-blue-200 font-bold text-lg">₱</span>
+                    <span className="text-2xl font-black text-white">{(parseFloat(formData.item_cost || '0') + 49).toFixed(2)}</span>
+                 </div>
               </div>
             </div>
 
