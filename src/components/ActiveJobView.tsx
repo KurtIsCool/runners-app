@@ -104,11 +104,18 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
                    <div className="absolute top-3 left-0 w-full h-0.5 bg-gray-100 -z-10"></div>
                    {[{s: 'accepted', icon: CheckCircle, label: 'Accepted'},{s: 'purchasing', icon: ShoppingBag, label: 'Buying'},{s: 'delivering', icon: () => <AppLogo className="h-3 w-3" />, label: 'Delivery'},{s: 'delivered', icon: Camera, label: 'Delivered'}, {s: 'completed', icon: Star, label: 'Done'}].map((step, idx) => {
                       const isActive = step.s === job.status;
+                      // Handle disputed status visually in the stepper (treat as not past, or handle specially if needed)
+                      // If disputed, we might want to show everything up to delivered as "past" but maybe red?
+                      // For now, let's just make sure it doesn't break.
+                      // If status is 'disputed', indexOf returns -1, so isPast is false for all.
+                      // Let's modify logic: if disputed, we assume it went through the process up to delivered usually.
                       const statusList = ['accepted', 'purchasing', 'delivering', 'delivered', 'completed'];
                       let currentIdx = statusList.indexOf(job.status);
-                      if (job.status === 'disputed') currentIdx = 3;
+                      if (job.status === 'disputed') currentIdx = 3; // Assume it was at least delivered to be disputed
+
                       const isPast = currentIdx >= idx;
                       const isDisputed = job.status === 'disputed';
+
                       const Icon = step.icon;
                       return (
                         <div key={step.s} className="flex flex-col items-center">

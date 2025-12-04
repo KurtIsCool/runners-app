@@ -16,6 +16,10 @@ ALTER TABLE requests ADD COLUMN IF NOT EXISTS payment_ref TEXT;
 ALTER TABLE requests ADD COLUMN IF NOT EXISTS is_paid BOOLEAN DEFAULT FALSE;
 
 -- Update status check constraint if it exists (Supabase/Postgres enum handling depends on setup, often just text check)
+-- If status is an enum type:
+-- ALTER TYPE request_status ADD VALUE 'delivered';
+-- ALTER TYPE request_status ADD VALUE 'disputed';
+-- If status is text with check constraint:
 ALTER TABLE requests DROP CONSTRAINT IF EXISTS requests_status_check;
 ALTER TABLE requests ADD CONSTRAINT requests_status_check CHECK (status IN ('requested', 'accepted', 'purchasing', 'delivering', 'delivered', 'completed', 'cancelled', 'disputed'));
 
