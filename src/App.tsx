@@ -106,8 +106,55 @@ export default function App() {
             setPublicProfile(null);
             return;
         }
-        const { data } = await supabase.from('users').select('*').eq('id', showPublicProfileId).single();
-        if (data) setPublicProfile(data);
+
+        // Fetch user data
+        const { data: userData, error } = await supabase.from('users').select('*').eq('id', showPublicProfileId).single();
+        if (error || !userData) {
+            console.error("Failed to fetch user");
+            return;
+        }
+
+        // Fetch Stats Live (Count completed jobs & Calculate Average Rating)
+        // Note: For students, we count requests made. For runners, tasks completed.
+        let query = supabase.from('requests').select('rating, runner_rating, student_rating, status');
+        if (userData.role === 'student') {
+            query = query.eq('student_id', showPublicProfileId);
+        } else {
+            query = query.eq('runner_id', showPublicProfileId).eq('status', 'completed');
+        }
+
+        const { data: requestsData } = await query;
+
+        let calculatedRating = 0;
+        let reviewCount = 0;
+        let completedCount = 0;
+
+        if (requestsData) {
+            completedCount = requestsData.length; // For students this is total requests, for runners it is completed tasks (filtered above)
+
+            // Calculate rating
+            const ratings = requestsData
+                .map(r => userData.role === 'student' ? r.student_rating : r.runner_rating) // Get relevant rating column
+                .filter(r => r !== null && r !== undefined); // Filter out unrated
+
+            reviewCount = ratings.length;
+            if (reviewCount > 0) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                calculatedRating = ratings.reduce((a: any, b: any) => a + b, 0) / reviewCount;
+            }
+        }
+
+        // Merge calculated stats into profile object
+        // We create a dummy 'history' array of length 'completedCount' to satisfy the existing ProfileModal logic
+        const enrichedProfile: UserProfile = {
+            ...userData,
+            [userData.role === 'student' ? 'student_rating' : 'runner_rating']: calculatedRating,
+            total_reviews: reviewCount,
+            history: Array(completedCount).fill('id'), // Hack to make .length work in ProfileModal
+            rating: calculatedRating // Fallback
+        };
+
+        setPublicProfile(enrichedProfile);
     };
     fetchPublicProfile();
   }, [showPublicProfileId]);
