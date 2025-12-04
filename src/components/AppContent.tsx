@@ -62,6 +62,9 @@ export default function AppContent({
           {/* Hero Card */}
           <header className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 md:p-12 text-white shadow-xl relative overflow-hidden flex flex-col items-start justify-center min-h-[300px]">
             <div className="relative z-10 max-w-xl">
+              <div className="mb-6">
+                <AppLogo className="h-24 w-24 text-white" />
+              </div>
               <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight">We run.<br />You study.</h1>
               <p className="text-blue-100 text-lg mb-8">Get food, print documents, or buy groceries without leaving your dorm.</p>
               <button

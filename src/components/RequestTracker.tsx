@@ -64,7 +64,8 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
     };
 
     const activeRequests = requests.filter(r => r.status !== 'cancelled' && r.status !== 'completed');
-    const pastRequests = requests.filter(r => r.status === 'completed' || r.status === 'cancelled' || r.status === 'disputed').sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    // Removed 'disputed' from pastRequests to avoid duplication if it is in activeRequests
+    const pastRequests = requests.filter(r => r.status === 'completed' || r.status === 'cancelled').sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return (
       <div className="space-y-6 pb-24 animate-slide-up">
