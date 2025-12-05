@@ -178,7 +178,13 @@ export default function App() {
     if (user) {
         const ch = supabase.channel('public:requests').on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, (p: RealtimePostgresChangesPayload<Request>) => {
             if (p.eventType === 'INSERT') setRequests(prev => [p.new, ...prev]);
-            else if (p.eventType === 'UPDATE') setRequests(prev => prev.map(r => r.id === p.new.id ? p.new : r));
+            else if (p.eventType === 'UPDATE') {
+                setRequests(prev => prev.map(r => r.id === p.new.id ? p.new : r));
+                // If a request is completed and I am the runner, and I haven't rated yet, show modal
+                if (p.new.status === 'completed' && p.new.runner_id === user.id && !p.new.student_rating) {
+                     setShowRatingModal(p.new);
+                }
+            }
         }).subscribe();
         return () => { supabase.removeChannel(ch); };
     }

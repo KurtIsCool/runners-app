@@ -84,7 +84,12 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl animate-blob"></div>
              <div className="relative z-10 mt-4">
                <div className="flex justify-between items-center mb-1">
-                   <span className="bg-blue-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">Active Mission</span>
+                   <span className="bg-blue-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">
+                        {['pending_runner'].includes(job.status) && "Job Application"}
+                        {['awaiting_payment', 'payment_review'].includes(job.status) && "Payment Verification"}
+                        {['accepted', 'purchasing', 'delivering'].includes(job.status) && "Active Mission"}
+                        {['delivered', 'completed', 'disputed'].includes(job.status) && "Mission Status"}
+                   </span>
                    <div className="text-right">
                        <div className="font-bold text-xl">₱{job.price_estimate}</div>
                        {job.item_cost !== undefined && <div className="text-[10px] text-blue-200">Collect ₱{job.price_estimate}</div>}

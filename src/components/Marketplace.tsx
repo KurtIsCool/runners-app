@@ -106,7 +106,7 @@ const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, use
                   disabled={!!myActiveJob}
                   className="w-full bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors flex justify-center items-center gap-2 btn-press disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {myActiveJob ? 'Finish Active Job First' : 'Accept Job'} <ArrowRight size={16}/>
+                  {myActiveJob ? (myActiveJob.status === 'pending_runner' ? 'View Application' : 'Finish Active Job First') : 'Accept Job'} <ArrowRight size={16}/>
                 </button>
               </div>
             ))}
