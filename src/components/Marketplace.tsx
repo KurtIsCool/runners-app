@@ -25,10 +25,20 @@ const JobRequester = ({ studentId, onClick }: { studentId: string, onClick?: (id
     );
 }
 
-const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, userProfile, onViewProfile, onRateUser }: { requests: Request[], onClaim: (id: string) => void, onUpdateStatus: (id: string, status: RequestStatus) => void, userId: string, onRefresh: () => void, userProfile: UserProfile, onViewProfile?: (userId: string) => void, onRateUser?: (req: Request) => void }) => {
+const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, userProfile, onViewProfile, onRateUser }: { requests: Request[], onClaim: (id: string) => Promise<void> | void, onUpdateStatus: (id: string, status: RequestStatus) => void, userId: string, onRefresh: () => void, userProfile: UserProfile, onViewProfile?: (userId: string) => void, onRateUser?: (req: Request) => void }) => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [viewActiveJob, setViewActiveJob] = useState(false);
     const handleRefresh = async () => { setIsRefreshing(true); await onRefresh(); setTimeout(() => setIsRefreshing(false), 500); };
+
+    const handleClaim = async (id: string) => {
+        try {
+            await onClaim(id);
+        } catch (error) {
+            console.error(error);
+            alert(error instanceof Error ? error.message : "Failed to accept job. It might have been taken.");
+            onRefresh();
+        }
+    };
 
     // Exclude disputed jobs so runner is not blocked.
     // Ensure all active states are caught.
@@ -92,7 +102,7 @@ const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, use
                 </div>
                 <div className="space-y-2 mb-6 border-l-2 border-gray-100 pl-3"><div className="text-sm text-gray-600 truncate"><span className="font-bold text-xs uppercase text-gray-400 mr-2">From</span> {req.pickup_address}</div><div className="text-sm text-gray-600 truncate"><span className="font-bold text-xs uppercase text-gray-400 mr-2">To</span> {req.dropoff_address}</div></div>
                 <button
-                  onClick={() => !myActiveJob && onClaim(req.id)}
+                  onClick={() => !myActiveJob && handleClaim(req.id)}
                   disabled={!!myActiveJob}
                   className="w-full bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors flex justify-center items-center gap-2 btn-press disabled:opacity-50 disabled:cursor-not-allowed"
                 >
