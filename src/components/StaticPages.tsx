@@ -78,7 +78,7 @@ const StaticPage = ({ page, onBack }: StaticPageProps) => {
         <div className="space-y-4 text-gray-600">
           <p>Need assistance with an order?</p>
           <ul className="list-disc pl-5 space-y-2">
-            <li>Check your active missions in the "Activity" tab.</li>
+            <li>Check your active requests in the "Activity" tab.</li>
             <li>Contact your runner directly if you have an assigned runner.</li>
             <li>Email support for critical issues.</li>
           </ul>
