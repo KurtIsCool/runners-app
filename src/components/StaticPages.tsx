@@ -1,4 +1,4 @@
-import { ArrowLeft, Mail, FileText, HelpCircle, Shield, Info, Phone, Facebook, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, Mail, FileText, HelpCircle, Shield, Info, type LucideIcon } from 'lucide-react';
 
 interface StaticPageProps {
   page: string;
@@ -25,41 +25,12 @@ const StaticPage = ({ page, onBack }: StaticPageProps) => {
       title: 'Contact Us',
       icon: Mail,
       body: (
-        <div className="space-y-6 text-gray-600">
+        <div className="space-y-4 text-gray-600">
           <p>Have questions or feedback? Reach out to us!</p>
-          <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 space-y-4">
+          <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
             <h3 className="font-bold text-blue-900 mb-2">Support Team</h3>
-
-            <a href="mailto:Runners@gmail.com" className="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="bg-red-100 p-2 rounded-full text-red-600">
-                <Mail size={20} />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-gray-400 uppercase">Email</div>
-                <div className="font-medium text-gray-900">Runners@gmail.com</div>
-              </div>
-            </a>
-
-            <a href="tel:09852885959" className="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="bg-green-100 p-2 rounded-full text-green-600">
-                <Phone size={20} />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-gray-400 uppercase">Phone</div>
-                <div className="font-medium text-gray-900">09852885959</div>
-              </div>
-            </a>
-
-            <a href="https://www.facebook.com/D-Runners" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <div className="bg-blue-100 p-2 rounded-full text-blue-600">
-                <Facebook size={20} />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-gray-400 uppercase">Facebook Page</div>
-                <div className="font-medium text-gray-900">D' Runners</div>
-              </div>
-            </a>
-
+            <p className="text-sm">Email: support@runnersapp.com</p>
+            <p className="text-sm">Phone: +63 900 000 0000</p>
           </div>
         </div>
       ),
@@ -109,7 +80,7 @@ const StaticPage = ({ page, onBack }: StaticPageProps) => {
           <ul className="list-disc pl-5 space-y-2">
             <li>Check your active requests in the "Activity" tab.</li>
             <li>Contact your runner directly if you have an assigned runner.</li>
-            <li>For general inquiries, visit our <button onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'contact' }))} className="text-blue-600 font-bold hover:underline">Contact Page</button>.</li>
+            <li>Email support for critical issues.</li>
           </ul>
         </div>
       ),
