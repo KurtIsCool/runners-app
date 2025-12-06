@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera, X } from 'lucide-react';
-import AppLogo from './AppLogo';
-import { type Request, type UserProfile, type RequestStatus } from '../types';
+import { Minimize2, QrCode, CheckCircle, Star, MapPin, Navigation, Loader2, MessageCircle, Camera, X } from 'lucide-react';
+import { type Mission, type UserProfile } from '../types';
 import ChatBox from './ChatBox';
 import ProofUpload from './ProofUpload';
 import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
-const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRateUser }: { job: Request, userId: string, onUpdateStatus: (id: string, status: RequestStatus) => void, userProfile: UserProfile, onClose: () => void, onRateUser?: (req: Request) => void }) => {
+const ActiveJobView = ({ job, userId, userProfile, onClose, onRateUser }: { job: Mission, userId: string, userProfile: UserProfile, onClose: () => void, onRateUser?: (req: Mission) => void }) => {
     const [updating, setUpdating] = useState(false);
     const [showPayment, setShowPayment] = useState(false);
     const [studentName, setStudentName] = useState<string>('Student');
@@ -25,38 +25,24 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
         fetchStudentName();
     }, [job.student_id]);
 
-    const handleStatusUpdate = async (status: RequestStatus) => {
-        setUpdating(true);
-        try {
-            await onUpdateStatus(job.id, status);
-        } catch {
-            alert("Failed to update status.");
-        } finally {
-            setUpdating(false);
-        }
-    };
 
     const confirmPayment = async () => {
         if (!confirm("Confirm that you have received the payment?")) return;
         setVerifyingPayment(true);
-        // On confirm, we update is_paid AND ensure status is 'accepted' (active mission start)
-        const { error } = await supabase.from('requests').update({
-            is_paid: true,
-            status: 'accepted'
-        }).eq('id', job.id);
 
-        if (error) {
-            alert("Failed to confirm payment");
+        // Use RPC
+        const res = await api.verifyPayment(userId, job.id, true);
+        if (res.error || !res.data.success) {
+            alert("Failed to verify payment: " + (res.error?.message || res.data?.message));
+        } else {
+             // Success - Parent update will handle state change via realtime
+             // But we can optimistically notify user
         }
         setVerifyingPayment(false);
     };
 
     const handleProofUpload = async (url: string) => {
         setProofUrl(url);
-        const { error } = await supabase.from('requests').update({ proof_url: url }).eq('id', job.id);
-        if (error) {
-            alert('Failed to save proof image');
-        }
     };
 
     const submitDelivery = async () => {
@@ -65,8 +51,13 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
             return;
         }
         setUpdating(true);
-        await onUpdateStatus(job.id, 'delivered');
-        setShowProofUpload(false);
+
+        const res = await api.submitProofOfDelivery(userId, job.id, proofUrl);
+        if (res.error || !res.data.success) {
+             alert("Failed to submit proof: " + (res.error?.message || res.data?.message));
+        } else {
+             setShowProofUpload(false);
+        }
         setUpdating(false);
     };
 
@@ -102,30 +93,24 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
                 <div className="text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-wide">Current Status</div>
                 <div className="flex items-center justify-between relative px-2">
                    <div className="absolute top-3 left-0 w-full h-0.5 bg-gray-100 -z-10"></div>
-                   {/* If status is pending_runner or awaiting_payment, show a pre-stepper or simplified stepper */}
-                   {['pending_runner', 'awaiting_payment', 'payment_review'].includes(job.status) ? (
+                   {/* Simplified stepper for pre-active states */}
+                   {['runner_selected', 'awaiting_payment', 'payment_submitted', 'payment_verified'].includes(job.status) ? (
                         <div className="flex items-center justify-center w-full py-2">
                             <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
-                                {job.status === 'pending_runner' && "Waiting for Approval"}
-                                {job.status === 'awaiting_payment' && "Waiting for Payment"}
-                                {job.status === 'payment_review' && "Verifying Payment"}
+                                {job.status === 'runner_selected' && "Assigned - Waiting Payment"}
+                                {job.status === 'awaiting_payment' && "Assigned - Waiting Payment"}
+                                {job.status === 'payment_submitted' && "Action Required: Verify Payment"}
+                                {job.status === 'payment_verified' && "Payment Verified"}
                             </span>
                         </div>
                    ) : (
-                       [{s: 'accepted', icon: CheckCircle, label: 'Accepted'},{s: 'purchasing', icon: ShoppingBag, label: 'Buying'},{s: 'delivering', icon: () => <AppLogo className="h-3 w-3" />, label: 'Delivery'},{s: 'delivered', icon: Camera, label: 'Delivered'}, {s: 'completed', icon: Star, label: 'Done'}].map((step, idx) => {
+                       [{s: 'active_mission', icon: CheckCircle, label: 'Active'}, {s: 'proof_submitted', icon: Camera, label: 'Submitted'}, {s: 'awaiting_student_confirmation', icon: CheckCircle, label: 'Confirming'}, {s: 'completed', icon: Star, label: 'Done'}].map((step) => {
                           const isActive = step.s === job.status;
-                          const statusList = ['accepted', 'purchasing', 'delivering', 'delivered', 'completed'];
-                          let currentIdx = statusList.indexOf(job.status);
-                          if (job.status === 'disputed') currentIdx = 3;
-
-                          const isPast = currentIdx >= idx;
-                          const isDisputed = job.status === 'disputed';
-
                           const Icon = step.icon;
                           return (
                             <div key={step.s} className="flex flex-col items-center">
-                               <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isActive ? 'bg-blue-600 border-blue-600 text-white scale-125 shadow-lg' : isPast ? (isDisputed ? 'bg-red-100 border-red-400 text-red-500' : 'bg-blue-100 border-blue-600 text-blue-600') : 'bg-white border-gray-200 text-gray-200'}`}><Icon size={12} /></div>
-                               <span className={`text-[9px] mt-1 font-bold ${isActive ? 'text-blue-600' : isPast ? (isDisputed ? 'text-red-400' : 'text-blue-600') : 'text-gray-400'}`}>{step.label}</span>
+                               <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isActive ? 'bg-blue-600 border-blue-600 text-white scale-125 shadow-lg' : 'bg-white border-gray-200 text-gray-200'}`}><Icon size={12} /></div>
+                               <span className={`text-[9px] mt-1 font-bold ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>{step.label}</span>
                             </div>
                           )
                        })
@@ -133,23 +118,16 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
                 </div>
              </div>
 
-             {/* Pre-Active States (Waiting for Approval/Payment) */}
-             {job.status === 'pending_runner' && (
-                 <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
-                     <p className="text-sm text-indigo-800 text-center font-bold">You have applied for this job.</p>
-                     <p className="text-xs text-indigo-600 text-center mt-1">Waiting for the student to accept your offer.</p>
-                 </div>
-             )}
-
-             {job.status === 'awaiting_payment' && (
+             {/* Status specific cards */}
+             {(job.status === 'runner_selected' || job.status === 'awaiting_payment') && (
                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                     <p className="text-sm text-blue-800 text-center font-bold">Offer Accepted!</p>
+                     <p className="text-sm text-blue-800 text-center font-bold">Assignment Confirmed!</p>
                      <p className="text-xs text-blue-600 text-center mt-1">Waiting for the student to send payment (₱{job.price_estimate}).</p>
                  </div>
              )}
 
              {/* Payment Verification Section */}
-             {(job.status === 'payment_review' || (job.status === 'accepted' && !job.is_paid)) && (
+             {(job.status === 'payment_submitted') && (
                 <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 animate-pulse">
                     <h3 className="font-bold text-orange-800 text-sm mb-2 flex items-center gap-2"><CheckCircle size={16}/> Payment Verification</h3>
                     {job.payment_proof_url ? (
@@ -159,9 +137,15 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
                             <button onClick={confirmPayment} disabled={verifyingPayment} className="w-full bg-orange-600 text-white font-bold py-3 rounded-lg text-sm hover:bg-orange-700 btn-press">
                                 {verifyingPayment ? 'Verifying...' : 'Confirm Payment Received'}
                             </button>
+                            <button onClick={() => {
+                                const reason = prompt("Enter reason for rejection:");
+                                if (reason) api.verifyPayment(userId, job.id, false, reason);
+                            }} className="w-full mt-2 bg-red-100 text-red-700 font-bold py-2 rounded-lg text-xs hover:bg-red-200">
+                                Reject Payment
+                            </button>
                         </div>
                     ) : (
-                        <p className="text-xs text-orange-700">Waiting for student to transfer payment...</p>
+                        <p className="text-xs text-orange-700">Waiting for payment proof...</p>
                     )}
                 </div>
              )}
@@ -187,19 +171,25 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
           </div>
 
           <div className="p-4 border-t bg-white pb-safe-nav shrink-0">
-             {job.status === 'accepted' && (
+             {job.status === 'payment_verified' && (
+                  <div className="w-full bg-blue-100 text-blue-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center animate-pulse">Mission Loading...</div>
+             )}
+             {/* Main Active State */}
+             {job.status === 'active_mission' && (
                  <button
-                    disabled={updating || !job.is_paid}
-                    onClick={() => handleStatusUpdate('purchasing')}
+                    disabled={updating}
+                    onClick={() => setShowProofUpload(true)}
                     className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-base hover:bg-blue-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                  >
-                    {updating ? <Loader2 className="animate-spin"/> : !job.is_paid ? 'Wait for Payment' : <>Start Purchasing <ArrowRight size={18}/></>}
+                    {updating ? <Loader2 className="animate-spin"/> : <>Complete Mission <Camera size={18}/></>}
                  </button>
              )}
-             {job.status === 'purchasing' && <button disabled={updating} onClick={() => handleStatusUpdate('delivering')} className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold text-base hover:bg-purple-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-purple-200">{updating ? <Loader2 className="animate-spin"/> : <>Start Delivering <AppLogo className="h-5 w-5 text-white" /></>}</button>}
-             {job.status === 'delivering' && <button disabled={updating} onClick={() => setShowProofUpload(true)} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-base hover:bg-green-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-green-200">{updating ? <Loader2 className="animate-spin"/> : <>Upload Proof & Finish <Camera size={18}/></>}</button>}
-             {job.status === 'delivered' && <div className="w-full bg-yellow-100 text-yellow-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center">Waiting for Student Confirmation</div>}
+
+             {job.status === 'proof_submitted' && <div className="w-full bg-yellow-100 text-yellow-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center">Waiting for Confirmation</div>}
+             {job.status === 'awaiting_student_confirmation' && <div className="w-full bg-yellow-100 text-yellow-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center">Student Reviewing Delivery</div>}
+
              {job.status === 'disputed' && <div className="w-full bg-red-100 text-red-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center animate-pulse">⚠️ Task Disputed. Contact Support.</div>}
+
              {job.status === 'completed' && (
                  <div className="space-y-2">
                      <div className="w-full bg-green-100 text-green-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center"><CheckCircle/> Job Completed!</div>

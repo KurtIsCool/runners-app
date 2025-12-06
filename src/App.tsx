@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
-import { type UserRole, type UserProfile, type Request } from './types';
+import { api } from './lib/api';
+import { type UserRole, type UserProfile, type Mission } from './types';
 import { ILOILO_LAT, ILOILO_LNG } from './lib/constants';
 import ChatBox from './components/ChatBox';
-import RequestForm from './components/RequestForm';
+import MissionForm from './components/MissionForm';
 import ProfileModal from './components/ProfileModal';
 import RatingModal from './components/RatingModal';
 import AuthScreen from './components/AuthScreen';
@@ -49,14 +50,14 @@ export default function App() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [view, setView] = useState('home'); // 'home' | 'tracker' | 'dashboard' | 'profile'
-  const [showRequestForm, setShowRequestForm] = useState(false);
-  const [showRatingModal, setShowRatingModal] = useState<Request | null>(null);
+  const [showMissionForm, setShowMissionForm] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState<Mission | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPublicProfileId, setShowPublicProfileId] = useState<string | null>(null); // New state for public profile
   const [publicProfile, setPublicProfile] = useState<UserProfile | null>(null); // New state for public profile data
-  const [requests, setRequests] = useState<Request[]>([]);
+  const [missions, setMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeChatRequest, setActiveChatRequest] = useState<string|null>(null);
+  const [activeChatMission, setActiveChatMission] = useState<string|null>(null);
 
   const isDesktop = useMediaQuery('(min-width: 768px)');
 
@@ -115,25 +116,25 @@ export default function App() {
         }
 
         // Fetch Stats Live (Count completed jobs & Calculate Average Rating)
-        // Note: For students, we count requests made. For runners, tasks completed.
-        let query = supabase.from('requests').select('rating, runner_rating, student_rating, status');
+        // Note: For students, we count missions made. For runners, tasks completed.
+        let query = supabase.from('missions').select('rating, runner_rating, student_rating, status');
         if (userData.role === 'student') {
             query = query.eq('student_id', showPublicProfileId);
         } else {
             query = query.eq('runner_id', showPublicProfileId).eq('status', 'completed');
         }
 
-        const { data: requestsData } = await query;
+        const { data: missionsData } = await query;
 
         let calculatedRating = 0;
         let reviewCount = 0;
         let completedCount = 0;
 
-        if (requestsData) {
-            completedCount = requestsData.length; // For students this is total requests, for runners it is completed tasks (filtered above)
+        if (missionsData) {
+            completedCount = missionsData.length; // For students this is total missions, for runners it is completed tasks (filtered above)
 
             // Calculate rating
-            const ratings = requestsData
+            const ratings = missionsData
                 .map(r => userData.role === 'student' ? r.student_rating : r.runner_rating) // Get relevant rating column
                 .filter(r => r !== null && r !== undefined); // Filter out unrated
 
@@ -159,28 +160,39 @@ export default function App() {
     fetchPublicProfile();
   }, [showPublicProfileId]);
 
-  const fetchRequests = useCallback(async () => {
-     const { data } = await supabase.from('requests').select('*').order('created_at', { ascending: false });
-     if (data) setRequests(data);
+  const fetchMissions = useCallback(async () => {
+     const { data } = await supabase.from('missions').select('*').order('created_at', { ascending: false });
+     if (data) setMissions(data);
   }, []);
 
   useEffect(() => {
     if (user) {
         // Calling async function inside useEffect without setState warning
         const load = async () => {
-            await fetchRequests();
+            await fetchMissions();
         };
         load();
     }
-  }, [user, fetchRequests]);
+  }, [user, fetchMissions]);
 
   useEffect(() => {
     if (user) {
-        const ch = supabase.channel('public:requests').on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, (p: RealtimePostgresChangesPayload<Request>) => {
-            if (p.eventType === 'INSERT') setRequests(prev => [p.new, ...prev]);
-            else if (p.eventType === 'UPDATE') setRequests(prev => prev.map(r => r.id === p.new.id ? p.new : r));
+        // Subscribe to Missions
+        const chMissions = supabase.channel('public:missions').on('postgres_changes', { event: '*', schema: 'public', table: 'missions' }, (p: RealtimePostgresChangesPayload<Mission>) => {
+            if (p.eventType === 'INSERT') setMissions(prev => [p.new, ...prev]);
+            else if (p.eventType === 'UPDATE') setMissions(prev => prev.map(r => r.id === p.new.id ? p.new : r));
         }).subscribe();
-        return () => { supabase.removeChannel(ch); };
+
+        // Subscribe to Applicants (to trigger updates on Marketplace or Tracker when someone applies)
+        // We might just re-fetch missions or specific mission data, but for now knowing something changed is good.
+        // Actually, MissionTracker and Marketplace handle their own specific subscriptions or optimistic updates.
+        // But if I am a student, and a runner applies, the MISSION status *might* change to 'pending_runner' (via RPC).
+        // If it does, the 'missions' subscription above catches it.
+        // BUT if it's the 2nd applicant, status doesn't change. We need to know to refresh the applicant list.
+        // ApplicantList component in MissionTracker subscribes to its own applicants.
+        // Marketplace subscribes to 'mission_applicants' to know if *I* applied? No, I track that locally or fetch on mount.
+
+        return () => { supabase.removeChannel(chMissions); };
     }
   }, [user]);
 
@@ -195,9 +207,9 @@ export default function App() {
   };
 
   // Type for request creation data, excluding auto-generated fields
-  type RequestCreationData = Omit<Request, 'id' | 'student_id' | 'created_at' | 'status'> & { lat?: number; lng?: number };
+  type MissionCreationData = Omit<Mission, 'id' | 'student_id' | 'created_at' | 'status'> & { lat?: number; lng?: number };
 
-  const createRequest = async (d: RequestCreationData) => {
+  const createMission = async (d: MissionCreationData) => {
     if (!user) return;
     const lat = d.lat || ILOILO_LAT;
     const lng = d.lng || ILOILO_LNG;
@@ -215,18 +227,18 @@ export default function App() {
         status: 'requested'
     };
 
-    const { error } = await supabase.from('requests').insert(requestToInsert);
-    if (!error) { setShowRequestForm(false); setView('tracker'); }
+    const { error } = await supabase.from('missions').insert(requestToInsert);
+    if (!error) { setShowMissionForm(false); setView('tracker'); }
   };
 
-  const updateRequestStatus = async (id: string, status: string) => {
-    await supabase.from('requests').update({ status }).eq('id', id);
+  const updateMissionStatus = async (id: string, status: string) => {
+    await supabase.from('missions').update({ status }).eq('id', id);
   };
 
-  const assignRequest = async (id: string, runnerId: string) => {
+  const assignMission = async (id: string, runnerId: string) => {
     // Optimistic locking: Only update if status is 'requested'
     const { data, error } = await supabase
-        .from('requests')
+        .from('missions')
         .update({ runner_id: runnerId, status: 'pending_runner' })
         .eq('id', id)
         .eq('status', 'requested')
@@ -237,24 +249,41 @@ export default function App() {
     }
   };
 
-  const rateRequest = async (id: string, rating: number, comment?: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updateData: any = { rating };
-    // Determine if user is student or runner to know which column to update (simplification: assume caller knows, or infer)
-    // Actually, RequestTracker calls this. If user is student, they rate runner.
-    // We should probably explicitly update `runner_rating` and `student_comment` (if user is student).
-    // But since the legacy `rating` field exists, we update that too for compatibility.
+  const rateMission = async (id: string, rating: number, comment?: string) => {
+    if (!user) return;
 
     // Check role of current user
     if (userProfile?.role === 'student') {
-        updateData.runner_rating = rating;
-        if (comment) updateData.student_comment = comment; // Comment BY student
+        const res = await api.rateRunner(user.id, id, rating, comment || '');
+        if (res.error || !res.data.success) {
+            console.error("Rate failed", res);
+            alert("Rating failed: " + (res.error?.message || res.data?.message));
+        }
     } else {
-        updateData.student_rating = rating;
-        if (comment) updateData.runner_comment = comment; // Comment BY runner
-    }
+        // Fallback for runner rating student if no RPC exists or using same RPC
+        // The prompt only specified 'rate_runner' RPC.
+        // But the app supports bilateral ratings.
+        // Ideally we'd have rate_student RPC too.
+        // For now, to comply with 'strict RPC' instruction for the defined flow (student rates runner), we use the RPC.
+        // For runner rating student, we might need to keep legacy update OR implement a new RPC.
+        // Requirement 11: "All RPCs exist and function as described... Do not omit server-side validation"
+        // Prompt 4 defines 'rate_runner' RPC. It does not define 'rate_student'.
+        // However, prompt 1, step 7 says "Student confirms delivery → Rating UI appears; after rating mission status becomes: completed".
+        // This implies the Student -> Runner rating is the critical path for completion.
+        // The Runner -> Student rating happens LATER or separately.
+        // So for the Student rating runner (which completes the mission), we MUST use the RPC.
 
-    await supabase.from('requests').update(updateData).eq('id', id);
+        // Use legacy update for runner->student since no RPC was specified for it?
+        // Or should I wrap it?
+        // The instructions say "Do not allow runner to verify payments...".
+        // It defines 'rate_runner' RPC explicitly.
+        // I will use legacy update for Runner -> Student rating to preserve bilateral rating feature without inventing unrequested RPCs,
+        // but use the strict RPC for Student -> Runner rating as requested.
+
+        const updateData: any = { student_rating: rating };
+        if (comment) updateData.runner_comment = comment;
+        await supabase.from('missions').update(updateData).eq('id', id);
+    }
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
@@ -283,24 +312,24 @@ export default function App() {
             view={view}
             setView={setView}
             userProfile={userProfile}
-            requests={requests}
-            setShowRequestForm={setShowRequestForm}
+            missions={missions}
+            setShowMissionForm={setShowMissionForm}
             setShowRatingModal={setShowRatingModal}
             setShowProfileModal={setShowProfileModal}
             setShowPublicProfileModal={setShowPublicProfileId}
             onLogout={async () => { await supabase.auth.signOut(); setView('home'); }}
-            fetchRequests={fetchRequests}
-            createRequest={createRequest}
-            updateRequestStatus={updateRequestStatus}
-            assignRequest={assignRequest}
-            rateRequest={rateRequest}
+            fetchMissions={fetchMissions}
+            createMission={createMission}
+            updateMissionStatus={updateMissionStatus}
+            assignMission={assignMission}
+            rateMission={rateMission}
             currentUserId={user.id}
           />
         </Layout>
 
         {/* Modals & Overlays - Global */}
-        {showRequestForm && <RequestForm onSubmit={createRequest} onCancel={() => setShowRequestForm(false)} />}
-        {showRatingModal && <RatingModal onSubmit={async (r: number, c?: string) => { await rateRequest(showRatingModal.id, r, c); setShowRatingModal(null); }} onClose={() => setShowRatingModal(null)} />}
+        {showMissionForm && <MissionForm onSubmit={createMission} onCancel={() => setShowMissionForm(false)} />}
+        {showRatingModal && <RatingModal onSubmit={async (r: number, c?: string) => { await rateMission(showRatingModal.id, r, c); setShowRatingModal(null); }} onClose={() => setShowRatingModal(null)} />}
 
         {/* Own Profile Modal (Editable) */}
         {showProfileModal && userProfile && <ProfileModal userProfile={userProfile} onSave={async (d: Partial<UserProfile>) => { await supabase.from('users').update(d).eq('id', user.id); setUserProfile({...userProfile, ...d}); }} onClose={() => setShowProfileModal(false)} />}
@@ -320,7 +349,7 @@ export default function App() {
             </div>
         )}
 
-        {activeChatRequest && <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 pop-in"><div className="w-full max-w-md bg-white rounded-xl overflow-hidden relative"><button className="absolute top-2 right-2 text-white z-10" onClick={()=>setActiveChatRequest(null)}><X/></button><ChatBox requestId={activeChatRequest} currentUserId={user.id} /></div></div>}
+        {activeChatMission && <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 pop-in"><div className="w-full max-w-md bg-white rounded-xl overflow-hidden relative"><button className="absolute top-2 right-2 text-white z-10" onClick={()=>setActiveChatMission(null)}><X/></button><ChatBox requestId={activeChatMission} currentUserId={user.id} /></div></div>}
       </div>
     </ErrorBoundary>
   );

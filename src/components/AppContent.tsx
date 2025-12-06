@@ -1,31 +1,31 @@
 import { Plus } from 'lucide-react';
 import AppLogo from './AppLogo';
 import Marketplace from './Marketplace';
-import RequestTracker from './RequestTracker';
+import MissionTracker from './MissionTracker';
 import RunnerDashboard from './RunnerDashboard';
 import ProfileView from './ProfileView';
 import StaticPage from './StaticPages';
-import { type UserProfile, type Request } from '../types';
+import { type UserProfile, type Mission } from '../types';
 import { useEffect } from 'react';
 
 interface AppContentProps {
   view: string;
   setView: (view: string) => void;
   userProfile: UserProfile | null;
-  requests: Request[];
+  missions: Mission[];
   loading?: boolean;
-  setShowRequestForm: (show: boolean) => void;
-  setShowRatingModal: (request: Request | null) => void;
+  setShowMissionForm: (show: boolean) => void;
+  setShowRatingModal: (request: Mission | null) => void;
   setShowProfileModal: (show: boolean) => void;
   // New: Handler for viewing other profiles
   setShowPublicProfileModal?: (userId: string) => void;
   onLogout: () => void;
-  fetchRequests: () => void;
+  fetchMissions: () => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  createRequest?: (data: any) => Promise<void>;
-  updateRequestStatus: (id: string, status: string) => Promise<void>;
-  assignRequest: (id: string, runnerId: string) => Promise<void>;
-  rateRequest: (id: string, rating: number, comment?: string) => Promise<void>;
+  createMission?: (data: any) => Promise<void>;
+  updateMissionStatus: (id: string, status: string) => Promise<void>;
+  assignMission: (id: string, runnerId: string) => Promise<void>;
+  rateMission: (id: string, rating: number, comment?: string) => Promise<void>;
   currentUserId: string;
 }
 
@@ -33,16 +33,16 @@ export default function AppContent({
   view,
   setView,
   userProfile,
-  requests,
-  setShowRequestForm,
+  missions,
+  setShowMissionForm,
   setShowRatingModal,
   setShowProfileModal,
   setShowPublicProfileModal,
   onLogout,
-  fetchRequests,
-  updateRequestStatus,
-  assignRequest,
-  rateRequest,
+  fetchMissions,
+  updateMissionStatus,
+  assignMission,
+  rateMission,
   currentUserId
 }: AppContentProps) {
 
@@ -69,10 +69,10 @@ export default function AppContent({
               <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight">We run.<br />You study.</h1>
               <p className="text-blue-100 text-lg mb-8">Get food, print documents, or buy groceries without leaving your dorm.</p>
               <button
-                onClick={() => setShowRequestForm(true)}
+                onClick={() => setShowMissionForm(true)}
                 className="bg-white text-blue-600 px-8 py-4 rounded-xl font-bold text-lg btn-press flex items-center gap-3 hover:bg-gray-50 transition-colors shadow-lg"
               >
-                <Plus size={24} /> Create New Request
+                <Plus size={24} /> Create New Mission
               </button>
             </div>
             <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-blob"></div>
@@ -83,7 +83,7 @@ export default function AppContent({
             {['Food', 'Print', 'Shop', 'Drop'].map((t) => (
               <button
                 key={t}
-                onClick={() => setShowRequestForm(true)}
+                onClick={() => setShowMissionForm(true)}
                 className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover-lift text-center font-bold text-gray-700 btn-press transition-all hover:border-blue-200"
               >
                 {t}
@@ -96,11 +96,11 @@ export default function AppContent({
       // Runner View (Marketplace)
       return (
         <Marketplace
-          requests={requests}
-          onClaim={(id) => assignRequest(id, currentUserId)}
-          onUpdateStatus={updateRequestStatus}
+          missions={missions}
+          onClaim={(id) => assignMission(id, currentUserId)}
+          onUpdateStatus={updateMissionStatus}
           userId={currentUserId}
-          onRefresh={fetchRequests}
+          onRefresh={fetchMissions}
           userProfile={userProfile!}
           onViewProfile={setShowPublicProfileModal}
           onRateUser={setShowRatingModal}
@@ -111,11 +111,11 @@ export default function AppContent({
 
   if (view === 'tracker') {
     return (
-      <RequestTracker
-        requests={requests.filter(r => r.student_id === currentUserId)}
+      <MissionTracker
+        missions={missions.filter(r => r.student_id === currentUserId)}
         currentUserId={currentUserId}
         onRate={(req, r, c) => {
-            if (r > 0) rateRequest(req.id, r, c);
+            if (r > 0) rateMission(req.id, r, c);
             else setShowRatingModal(req);
         }}
         onViewProfile={setShowPublicProfileModal}
@@ -127,7 +127,7 @@ export default function AppContent({
     return (
       <div className="max-w-3xl mx-auto">
         <RunnerDashboard
-          requests={requests}
+          missions={missions}
           userId={currentUserId}
           onViewProfile={setShowPublicProfileModal}
           onRateUser={setShowRatingModal}

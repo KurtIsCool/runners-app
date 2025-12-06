@@ -1,5 +1,5 @@
 import { Star, CheckCircle, User as UserIcon } from 'lucide-react';
-import { type Request } from '../types';
+import { type Mission } from '../types';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -22,9 +22,9 @@ const StudentInfo = ({ studentId, onClick }: { studentId: string, onClick?: (id:
     );
 }
 
-const RunnerDashboard = ({ requests, userId, onViewProfile, onRateUser }: { requests: Request[], userId: string, onViewProfile?: (userId: string) => void, onRateUser?: (req: Request) => void }) => {
-    const completed = requests.filter(r => r.runner_id === userId && r.status === 'completed');
-    const disputed = requests.filter(r => r.runner_id === userId && r.status === 'disputed');
+const RunnerDashboard = ({ missions, userId, onViewProfile, onRateUser }: { missions: Mission[], userId: string, onViewProfile?: (userId: string) => void, onRateUser?: (req: Mission) => void }) => {
+    const completed = missions.filter(r => r.runner_id === userId && r.status === 'completed');
+    const disputed = missions.filter(r => r.runner_id === userId && r.status === 'disputed');
 
     const earnings = completed.reduce((sum, r) => sum + (r.price_estimate || 0), 0);
     // Use runner_rating if available, fallback to legacy rating
