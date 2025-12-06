@@ -1,5 +1,5 @@
 import { Star, CheckCircle, User as UserIcon } from 'lucide-react';
-import { type Request } from '../types';
+import { type Mission } from '../types';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -22,7 +22,7 @@ const StudentInfo = ({ studentId, onClick }: { studentId: string, onClick?: (id:
     );
 }
 
-const RunnerDashboard = ({ requests, userId, onViewProfile, onRateUser }: { requests: Request[], userId: string, onViewProfile?: (userId: string) => void, onRateUser?: (req: Request) => void }) => {
+const RunnerDashboard = ({ requests, userId, onViewProfile, onRateUser }: { requests: Mission[], userId: string, onViewProfile?: (userId: string) => void, onRateUser?: (req: Mission) => void }) => {
     const completed = requests.filter(r => r.runner_id === userId && r.status === 'completed');
     const disputed = requests.filter(r => r.runner_id === userId && r.status === 'disputed');
 
@@ -53,7 +53,7 @@ const RunnerDashboard = ({ requests, userId, onViewProfile, onRateUser }: { requ
                             <StudentInfo studentId={job.student_id} onClick={onViewProfile} />
                          </div>
                       </div>
-                      <span className="font-black text-gray-400 bg-gray-100 px-3 py-1 rounded-lg text-sm">₱{job.price_estimate}</span>
+                      <span className="font-black text-gray-400 bg-green-50 px-3 py-1 rounded-lg text-sm">₱{job.price_estimate}</span>
                    </div>
                    <div className="bg-red-50 p-2 rounded text-red-800 text-xs mb-2">
                      <strong>Status:</strong> Student marked as Disputed. Please contact support or the student.

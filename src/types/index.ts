@@ -1,77 +1,105 @@
 export type UserRole = 'student' | 'runner';
-// Added 'delivered' and 'disputed' to statuses
-export type RequestStatus = 'requested' | 'pending_runner' | 'awaiting_payment' | 'payment_review' | 'accepted' | 'purchasing' | 'delivering' | 'delivered' | 'completed' | 'cancelled' | 'disputed';
 
 export interface UserProfile {
   id: string;
+  email: string;
   name: string;
-  phone: string;
   role: UserRole;
-  rating?: number; // Overall rating
-  is_verified?: boolean;
-  school_id_url?: string;
-  payment_qr_url?: string;
-  payment_number?: string; // GCash Number
+  phone?: string;
   avatar_url?: string;
-  // New fields
-  history?: string[]; // Array of request IDs or simple summary (we might not store this in user row, but useful for frontend cache)
+  rating?: number;
+  total_reviews?: number;
   student_rating?: number;
   runner_rating?: number;
-  total_reviews?: number;
+  bio?: string;
+  school_id_url?: string;
+  gov_id_url?: string;
+  is_verified?: boolean;
+  payment_qr_url?: string;
+  payment_number?: string;
+  history?: string[];
 }
 
-export interface Request {
+// Strict canonical list of statuses
+export type MissionStatus =
+  | 'requested'
+  | 'pending_runner_confirmation'
+  | 'runner_selected'
+  | 'awaiting_payment'
+  | 'payment_submitted'
+  | 'payment_verified'
+  | 'active_mission'
+  | 'proof_submitted'
+  | 'awaiting_student_confirmation'
+  | 'completed'
+  | 'disputed'
+  | 'cancelled';
+
+export type PaymentStatus = 'unpaid' | 'submitted' | 'verified';
+
+export interface Mission {
   id: string;
   student_id: string;
   runner_id?: string;
-  type: string;
+  type: string; // 'food', 'print', etc.
   pickup_address: string;
   dropoff_address: string;
   details: string;
-  price_estimate: number; // This can now represent the Total or just the Fee?
-                          // Recommendation: Keep as Total (Fee + Item Cost) for backward compat or ease of display,
-                          // OR strictly Fee (49).
-                          // Given the user said "49 is fixed", let's make `price_estimate` the FEE (49) and add `item_cost`.
-                          // But wait, existing code sums `price_estimate` for earnings.
-                          // If `price_estimate` becomes Fee (49), then logic holds.
-                          // We add `item_cost` for the extra amount.
-
-  item_cost?: number; // New field
-
-  status: RequestStatus;
+  price_estimate: number;
+  item_cost?: number; // Cost of items
+  status: MissionStatus;
+  payment_status: PaymentStatus;
   created_at: string;
 
-  // Locations
+  // Timestamps
+  applied_at?: string;
+  runner_selected_at?: string;
+  payment_submitted_at?: string;
+  payment_verified_at?: string;
+  active_at?: string;
+  proof_submitted_at?: string;
+  delivery_confirmed_at?: string;
+  completed_at?: string;
+
+  // Proofs & Meta
+  proof_url?: string;
+  payment_proof_url?: string;
+  payment_ref?: string;
+
+  // Geolocation
+  lat?: number;
+  lng?: number;
   pickup_lat?: number;
   pickup_lng?: number;
   dropoff_lat?: number;
   dropoff_lng?: number;
 
-  // Deprecated but keeping for compatibility if needed, or mapped to pickup/dropoff
-  lat?: number;
-  lng?: number;
-
-  // Proof & Completion
-  proof_url?: string;
-  confirmed_at?: string;
-
-  // Payment
-  payment_proof_url?: string;
-  payment_ref?: string;
-  is_paid?: boolean;
-
   // Ratings
-  rating?: number; // keeping for backward compat, maybe alias to runner_rating
-  runner_rating?: number; // Rating given TO the runner
-  student_rating?: number; // Rating given TO the student
-  runner_comment?: string;
+  rating?: number; // Legacy/Fallback
+  student_rating?: number;
+  runner_rating?: number;
   student_comment?: string;
+  runner_comment?: string;
+}
+
+export interface MissionApplicant {
+  id: string;
+  mission_id: string;
+  runner_id: string;
+  applied_at: string;
+  message?: string;
+  // Joined fields
+  runner?: {
+      name: string;
+      rating: number;
+      avatar_url?: string;
+  }
 }
 
 export interface Message {
   id: string;
-  request_id: string;
+  mission_id: string;
   sender_id: string;
-  text: string;
+  content: string;
   created_at: string;
 }

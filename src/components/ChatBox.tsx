@@ -14,13 +14,13 @@ const ChatBox = ({ requestId, currentUserId, embedded = false }: { requestId: st
     useEffect(() => {
       if (!supabase) return;
       const fetchMessages = async () => {
-        const { data } = await supabase.from('messages').select('*').eq('request_id', requestId).order('created_at', { ascending: true });
+        const { data } = await supabase.from('messages').select('*').eq('mission_id', requestId).order('created_at', { ascending: true });
         if (data) setMessages(data);
       };
 
       const fetchChatDetails = async () => {
           // Fetch request details to identify the other party
-          const { data: request } = await supabase.from('requests').select('student_id, runner_id').eq('id', requestId).single();
+          const { data: request } = await supabase.from('missions').select('student_id, runner_id').eq('id', requestId).single();
           if (request) {
               const otherUserId = request.student_id === currentUserId ? request.runner_id : request.student_id;
               if (otherUserId) {
@@ -33,12 +33,12 @@ const ChatBox = ({ requestId, currentUserId, embedded = false }: { requestId: st
       fetchMessages();
       if (!embedded) fetchChatDetails();
 
-      const channel = supabase.channel(`chat:${requestId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `request_id=eq.${requestId}` }, (payload: RealtimePostgresInsertPayload<Message>) => {
+      const channel = supabase.channel(`chat:${requestId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `mission_id=eq.${requestId}` }, (payload: RealtimePostgresInsertPayload<Message>) => {
           setMessages(prev => {
               if (prev.find(m => m.id === payload.new.id)) return prev;
               return [...prev, payload.new as Message];
           });
-          if (payload.new.sender_id !== currentUserId) sendNotification("New Message", payload.new.text);
+          if (payload.new.sender_id !== currentUserId) sendNotification("New Message", payload.new.content);
         }).subscribe();
       return () => { supabase.removeChannel(channel); };
     }, [requestId, currentUserId, embedded]);
@@ -50,7 +50,7 @@ const ChatBox = ({ requestId, currentUserId, embedded = false }: { requestId: st
       if (!newMessage.trim() || !supabase) return;
       const textToSend = newMessage;
       setNewMessage('');
-      await supabase.from('messages').insert({ request_id: requestId, sender_id: currentUserId, text: textToSend });
+      await supabase.from('messages').insert({ mission_id: requestId, sender_id: currentUserId, content: textToSend });
     };
 
     return (
@@ -62,7 +62,7 @@ const ChatBox = ({ requestId, currentUserId, embedded = false }: { requestId: st
             const isMe = msg.sender_id === currentUserId;
             return (
               <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} stagger-enter`} style={{animationDelay: '0s'}}>
-                <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm shadow-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'}`}>{msg.text}</div>
+                <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm shadow-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'}`}>{msg.content}</div>
               </div>
             );
           })}

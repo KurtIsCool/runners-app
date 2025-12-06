@@ -13,7 +13,7 @@ interface DesktopLayoutProps {
 export default function DesktopLayout({ children, view, setView, userProfile, onLogout }: DesktopLayoutProps) {
   // Use default role 'student' if profile is null, and default profile object for sidebar
   const role: UserRole = userProfile?.role || 'student';
-  const sidebarProfile = userProfile || { id: '', name: 'User', role: 'student', phone: '' };
+  const sidebarProfile = userProfile || { id: '', name: 'User', role: 'student', phone: '', email: 'user@example.com' };
 
   return (
     <div className="flex min-h-screen bg-gray-50 desktop-layout">
