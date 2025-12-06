@@ -209,7 +209,11 @@ export default function App() {
         pickup_address: d.pickup_address,
         dropoff_address: d.dropoff_address,
         details: d.details,
-        price_estimate: d.price_estimate,
+        price_estimate: d.price_estimate, // Total
+        item_cost: d.item_cost,
+        service_fee: d.service_fee,
+        additional_cost: d.additional_cost,
+        additional_cost_reason: d.additional_cost_reason,
         lat,
         lng,
         status: 'requested'

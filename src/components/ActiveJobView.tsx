@@ -104,7 +104,11 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
                    <span className="bg-blue-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">Active Mission</span>
                    <div className="text-right">
                        <div className="font-bold text-xl">₱{job.price_estimate}</div>
-                       {job.item_cost !== undefined && <div className="text-[10px] text-blue-200">Collect ₱{job.price_estimate}</div>}
+                       <div className="text-[10px] text-blue-200">
+                         {job.item_cost !== undefined ? (
+                           <>Item: ₱{job.item_cost} + Fee: ₱{job.service_fee || 49} {job.additional_cost ? `+ Add: ₱${job.additional_cost}` : ''}</>
+                         ) : 'Collect Total'}
+                       </div>
                    </div>
                </div>
                <h2 className="text-xl font-bold capitalize mb-1">{job.type}</h2>
