@@ -77,11 +77,11 @@ const RunnerDashboard = ({ requests, userId, onViewProfile, onRateUser }: { requ
                 <div key={job.id} style={{animationDelay: `${i*50}ms`}} className="stagger-enter bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all group">
                    <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-3">
-                         <div className={`p-2.5 rounded-xl ${job.type === 'food' ? 'bg-orange-100 text-orange-600' : job.type === 'printing' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
-                           {job.type === 'food' ? '🍔' : job.type === 'printing' ? '🖨️' : '📦'}
+                         <div className={`p-2.5 rounded-xl ${job.type === 'food' ? 'bg-orange-100 text-orange-600' : job.type === 'printing' ? 'bg-purple-100 text-purple-600' : job.type === 'custom' ? 'bg-pink-100 text-pink-600' : 'bg-blue-100 text-blue-600'}`}>
+                           {job.type === 'food' ? '🍔' : job.type === 'printing' ? '🖨️' : job.type === 'custom' ? '✨' : '📦'}
                          </div>
                          <div>
-                            <h4 className="font-bold text-gray-900 capitalize">{job.type} Delivery</h4>
+                            <h4 className="font-bold text-gray-900 capitalize">{job.type === 'custom' ? 'Custom Errand' : `${job.type} Delivery`}</h4>
                             <p className="text-xs text-gray-500 mb-1">{new Date(job.created_at).toLocaleDateString()} • {new Date(job.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                             <StudentInfo studentId={job.student_id} onClick={onViewProfile} />
                          </div>
