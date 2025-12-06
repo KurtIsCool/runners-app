@@ -59,6 +59,7 @@ export interface Request {
   payment_proof_url?: string;
   payment_ref?: string;
   is_paid?: boolean;
+  payment_method?: 'gcash' | 'cash';
 
   // Ratings
   rating?: number; // keeping for backward compat, maybe alias to runner_rating
