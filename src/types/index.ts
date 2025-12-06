@@ -28,15 +28,13 @@ export interface Request {
   pickup_address: string;
   dropoff_address: string;
   details: string;
-  price_estimate: number; // This can now represent the Total or just the Fee?
-                          // Recommendation: Keep as Total (Fee + Item Cost) for backward compat or ease of display,
-                          // OR strictly Fee (49).
-                          // Given the user said "49 is fixed", let's make `price_estimate` the FEE (49) and add `item_cost`.
-                          // But wait, existing code sums `price_estimate` for earnings.
-                          // If `price_estimate` becomes Fee (49), then logic holds.
-                          // We add `item_cost` for the extra amount.
+  price_estimate: number; // This represents the TOTAL (Item + Fee + Additional)
 
-  item_cost?: number; // New field
+  // Pricing Breakdown
+  item_cost?: number;        // Base cost of item
+  service_fee?: number;      // Fixed fee (default 49)
+  additional_cost?: number;  // Optional extra charge
+  additional_cost_reason?: string;
 
   status: RequestStatus;
   created_at: string;

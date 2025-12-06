@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, X, MapPin, Navigation, Map } from 'lucide-react';
+import { Loader2, X, MapPin, Navigation, Map, Info } from 'lucide-react';
 import MapPicker from './MapPicker';
 import { reverseGeocode } from '../lib/geocoding';
 
@@ -15,6 +15,7 @@ interface RequestFormData {
     pickup_lng: number;
     dropoff_lat: number;
     dropoff_lng: number;
+    additional_cost_reason: string;
 }
 
 interface RequestFormProps {
@@ -27,13 +28,15 @@ type LocationMode = 'pickup' | 'dropoff' | null;
 
 const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState<RequestFormData & { item_cost: string }>({
+    const [formData, setFormData] = useState<RequestFormData & { item_cost: string, additional_cost: string }>({
       type: 'food',
       pickup_address: '',
       dropoff_address: '',
       details: '',
       price_estimate: 49,
-      item_cost: '', // Input as string for better UX (handling empty state)
+      item_cost: '', // Input as string for better UX
+      additional_cost: '',
+      additional_cost_reason: 'Distance',
       pickup_lat: 0,
       pickup_lng: 0,
       dropoff_lat: 0,
@@ -47,13 +50,17 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
       setLoading(true);
 
       const itemCost = parseFloat(formData.item_cost) || 0;
+      const additionalCost = parseFloat(formData.additional_cost) || 0;
       const fixedFee = 49;
-      const total = itemCost + fixedFee;
+      const total = itemCost + fixedFee + additionalCost;
 
       await onSubmit({
         ...formData,
         item_cost: itemCost,
-        price_estimate: total, // Total = Item + Fee
+        service_fee: fixedFee,
+        additional_cost: additionalCost,
+        additional_cost_reason: additionalCost > 0 ? formData.additional_cost_reason : null,
+        price_estimate: total, // Total = Item + Fee + Additional
         lat: formData.pickup_lat,
         lng: formData.pickup_lng
       });
@@ -78,6 +85,12 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
             setFormData(prev => ({ ...prev, dropoff_address: address }));
           }
       }
+    };
+
+    const calculateTotal = () => {
+        const item = parseFloat(formData.item_cost || '0');
+        const additional = parseFloat(formData.additional_cost || '0');
+        return (item + 49 + additional).toFixed(2);
     };
 
     return (
@@ -160,32 +173,88 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
               <textarea required rows={2} placeholder="Add details (e.g. 'No pickles')..." className="w-full px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium text-gray-700 resize-none" value={formData.details} onChange={(e) => setFormData({...formData, details: e.target.value})}/>
             </div>
 
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Task Cost (Est.)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 text-gray-500 font-bold text-sm">₱</span>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="0"
-                  required
-                  className="w-full pl-7 pr-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all text-sm font-bold text-gray-900"
-                  value={formData.item_cost}
-                  onChange={(e) => setFormData({...formData, item_cost: e.target.value})}
-                />
-              </div>
-              <p className="text-[10px] text-gray-400 mt-1 ml-1">Price of items/service to be purchased.</p>
+            <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Task Cost (Est.)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-gray-500 font-bold text-sm">₱</span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      required
+                      className="w-full pl-7 pr-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 outline-none transition-all text-sm font-bold text-gray-900"
+                      value={formData.item_cost}
+                      onChange={(e) => setFormData({...formData, item_cost: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Service Fee</label>
+                  <div className="relative opacity-60">
+                    <span className="absolute left-3 top-2.5 text-gray-500 font-bold text-sm">₱</span>
+                    <input
+                      type="number"
+                      value="49"
+                      disabled
+                      className="w-full pl-7 pr-3 py-2.5 bg-gray-100 border border-gray-100 rounded-xl text-sm font-bold text-gray-500 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+            </div>
+
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                 <div className="flex items-center gap-2 mb-2">
+                     <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Optional: Additional Tip/Fee</span>
+                     <div className="group relative">
+                        <Info size={12} className="text-gray-400 cursor-help"/>
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-black text-white text-[10px] rounded hidden group-hover:block z-20">
+                            Add extra for heavy items, long distance, or rush orders.
+                        </div>
+                     </div>
+                 </div>
+                 <div className="flex gap-2">
+                     <div className="relative flex-1">
+                        <span className="absolute left-3 top-2.5 text-gray-500 font-bold text-sm">₱</span>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          className="w-full pl-7 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:border-blue-400 outline-none text-sm font-bold text-gray-900"
+                          value={formData.additional_cost}
+                          onChange={(e) => setFormData({...formData, additional_cost: e.target.value})}
+                        />
+                     </div>
+                     <select
+                        className="flex-[1.5] px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:border-blue-400 outline-none text-xs font-medium text-gray-700"
+                        value={formData.additional_cost_reason}
+                        onChange={(e) => setFormData({...formData, additional_cost_reason: e.target.value})}
+                     >
+                         <option value="Distance">Long Distance</option>
+                         <option value="Heavy">Heavy Items</option>
+                         <option value="Rush">Rush Fee</option>
+                         <option value="Tip">Tip</option>
+                         <option value="Other">Other</option>
+                     </select>
+                 </div>
             </div>
 
             <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-4 rounded-xl shadow-lg shadow-blue-600/20 text-white">
-              <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/10">
+              <div className="flex justify-between items-center mb-1">
                 <span className="text-xs text-blue-100">Task Cost</span>
                 <span className="font-bold">₱{parseFloat(formData.item_cost || '0').toFixed(2)}</span>
               </div>
-              <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/10">
+              <div className="flex justify-between items-center mb-1">
                 <span className="text-xs text-blue-100">Service Fee</span>
                 <span className="font-bold">₱49.00</span>
               </div>
+              {parseFloat(formData.additional_cost || '0') > 0 && (
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-blue-100">Additional ({formData.additional_cost_reason})</span>
+                    <span className="font-bold">₱{parseFloat(formData.additional_cost || '0').toFixed(2)}</span>
+                  </div>
+              )}
+              <div className="my-2 border-b border-white/10"></div>
               <div className="flex justify-between items-center pt-1">
                  <div>
                     <span className="block text-xs font-bold text-blue-100 uppercase tracking-wide">Total Price</span>
@@ -193,7 +262,7 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
                  </div>
                  <div className="flex items-center gap-0.5">
                     <span className="text-blue-200 font-bold text-lg">₱</span>
-                    <span className="text-2xl font-black text-white">{(parseFloat(formData.item_cost || '0') + 49).toFixed(2)}</span>
+                    <span className="text-2xl font-black text-white">{calculateTotal()}</span>
                  </div>
               </div>
             </div>
