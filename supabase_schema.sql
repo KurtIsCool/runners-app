@@ -80,6 +80,20 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Ensure messages table has request_id (handle potential rename from mission_id)
+DO $$
+BEGIN
+    -- Check for mission_id and rename if exists
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'messages' AND column_name = 'mission_id') THEN
+        ALTER TABLE messages RENAME COLUMN mission_id TO request_id;
+    END IF;
+
+    -- Check if request_id exists (if not created by table creation or rename)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'messages' AND column_name = 'request_id') THEN
+        ALTER TABLE messages ADD COLUMN request_id UUID REFERENCES requests(id);
+    END IF;
+END $$;
+
 -- RLS Policies
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE requests ENABLE ROW LEVEL SECURITY;
