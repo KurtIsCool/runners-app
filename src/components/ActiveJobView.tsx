@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera, X, Banknote, Smartphone } from 'lucide-react';
+import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera, X, Banknote, Smartphone, Ban } from 'lucide-react';
 import AppLogo from './AppLogo';
 import { type Request, type UserProfile, type RequestStatus } from '../types';
 import ChatBox from './ChatBox';
 import ProofUpload from './ProofUpload';
 import { supabase } from '../lib/supabase';
+import { cancelRequest } from '../lib/api';
 
 const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRateUser }: { job: Request, userId: string, onUpdateStatus: (id: string, status: RequestStatus) => void, userProfile: UserProfile, onClose: () => void, onRateUser?: (req: Request) => void }) => {
     const [updating, setUpdating] = useState(false);
@@ -14,6 +15,7 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
     const [showProofUpload, setShowProofUpload] = useState(false);
     const [verifyingPayment, setVerifyingPayment] = useState(false);
     const [showPaymentProof, setShowPaymentProof] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
 
     useEffect(() => {
         const fetchStudentName = async () => {
@@ -68,6 +70,27 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
         setVerifyingPayment(false);
     };
 
+    const handleCancelJob = async () => {
+        if (job.status === 'payment_review') {
+             if (!confirm("Warning: Payment has been submitted by the student. Cancelling now might require refund coordination. Proceed?")) return;
+        } else {
+             if (!confirm("Are you sure you want to cancel this job?")) return;
+        }
+
+        const reason = prompt("Please provide a reason for cancellation:");
+        if (!reason) return;
+
+        setCancelling(true);
+        try {
+            await cancelRequest(job.id, reason);
+            onClose(); // Close the modal
+        } catch (error: any) {
+            alert(`Failed to cancel job: ${error.message}`);
+        } finally {
+            setCancelling(false);
+        }
+    };
+
     const handleProofUpload = async (url: string) => {
         setProofUrl(url);
         const { error } = await supabase.from('requests').update({ proof_url: url }).eq('id', job.id);
@@ -92,7 +115,17 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
         {/* Left Side: Job Details */}
         <div className="w-full md:w-1/2 lg:w-1/3 bg-white flex flex-col border-r shadow-xl z-10 md:h-full order-1 h-[45vh]">
           <div className="bg-blue-900 text-white p-6 pb-6 relative overflow-hidden shrink-0">
-             <div className="absolute top-4 right-4 z-20">
+             <div className="absolute top-4 right-4 z-20 flex gap-2">
+               {['pending_runner', 'awaiting_payment', 'payment_review'].includes(job.status) && (
+                   <button
+                       onClick={handleCancelJob}
+                       disabled={cancelling}
+                       className="bg-red-500/20 hover:bg-red-500/40 p-2 rounded-full backdrop-blur-sm transition-all text-white border border-red-400/30"
+                       title="Cancel Job"
+                   >
+                       <Ban size={20}/>
+                   </button>
+               )}
                <button onClick={onClose} className="bg-white/20 hover:bg-white/30 p-2 rounded-full backdrop-blur-sm transition-all">
                  <Minimize2 size={20} className="text-white"/>
                </button>
