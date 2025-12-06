@@ -3,7 +3,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create users table (extends Supabase auth.users)
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY REFERENCES auth.users(id),
   name TEXT NOT NULL,
   phone TEXT,
@@ -21,7 +21,7 @@ CREATE TABLE users (
 );
 
 -- Create requests table (Missions)
-CREATE TABLE requests (
+CREATE TABLE IF NOT EXISTS requests (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   student_id UUID REFERENCES users(id) NOT NULL,
   runner_id UUID REFERENCES users(id),
@@ -54,11 +54,25 @@ CREATE TABLE requests (
   cancellation_reason TEXT
 );
 
--- Add status check constraint
-ALTER TABLE requests ADD CONSTRAINT requests_status_check CHECK (status IN ('requested', 'pending_runner', 'awaiting_payment', 'payment_review', 'accepted', 'purchasing', 'delivering', 'delivered', 'completed', 'cancelled', 'disputed'));
+-- Add cancellation_reason column if it does not exist (idempotent check)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'requests' AND column_name = 'cancellation_reason') THEN
+        ALTER TABLE requests ADD COLUMN cancellation_reason TEXT;
+    END IF;
+END $$;
+
+-- Update or Add status check constraint
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'requests_status_check') THEN
+        ALTER TABLE requests DROP CONSTRAINT requests_status_check;
+    END IF;
+    ALTER TABLE requests ADD CONSTRAINT requests_status_check CHECK (status IN ('requested', 'pending_runner', 'awaiting_payment', 'payment_review', 'accepted', 'purchasing', 'delivering', 'delivered', 'completed', 'cancelled', 'disputed'));
+END $$;
 
 -- Create messages table
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   request_id UUID REFERENCES requests(id) NOT NULL,
   sender_id UUID REFERENCES users(id) NOT NULL,
@@ -66,23 +80,44 @@ CREATE TABLE messages (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- RLS Policies (simplified for this context)
+-- RLS Policies
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view their own profile and others" ON users FOR SELECT USING (true);
-CREATE POLICY "Users can update their own profile" ON users FOR UPDATE USING (auth.uid() = id);
+-- Idempotent policy creation (drop if exists then create)
+DO $$
+BEGIN
+    -- Users policies
+    DROP POLICY IF EXISTS "Users can view their own profile and others" ON users;
+    CREATE POLICY "Users can view their own profile and others" ON users FOR SELECT USING (true);
 
-CREATE POLICY "Anyone can view requests" ON requests FOR SELECT USING (true);
-CREATE POLICY "Students can create requests" ON requests FOR INSERT WITH CHECK (auth.uid() = student_id);
-CREATE POLICY "Students can update their own requests" ON requests FOR UPDATE USING (auth.uid() = student_id);
-CREATE POLICY "Runners can update requests they are assigned to" ON requests FOR UPDATE USING (auth.uid() = runner_id);
--- Allow runners to 'apply' by updating runner_id if null (this might need a function for stricter control)
-CREATE POLICY "Runners can apply to requests" ON requests FOR UPDATE USING (runner_id IS NULL);
+    DROP POLICY IF EXISTS "Users can update their own profile" ON users;
+    CREATE POLICY "Users can update their own profile" ON users FOR UPDATE USING (auth.uid() = id);
 
-CREATE POLICY "Participants can view messages" ON messages FOR SELECT USING (auth.uid() IN (SELECT student_id FROM requests WHERE id = request_id) OR auth.uid() IN (SELECT runner_id FROM requests WHERE id = request_id));
-CREATE POLICY "Participants can send messages" ON messages FOR INSERT WITH CHECK (auth.uid() IN (SELECT student_id FROM requests WHERE id = request_id) OR auth.uid() IN (SELECT runner_id FROM requests WHERE id = request_id));
+    -- Requests policies
+    DROP POLICY IF EXISTS "Anyone can view requests" ON requests;
+    CREATE POLICY "Anyone can view requests" ON requests FOR SELECT USING (true);
+
+    DROP POLICY IF EXISTS "Students can create requests" ON requests;
+    CREATE POLICY "Students can create requests" ON requests FOR INSERT WITH CHECK (auth.uid() = student_id);
+
+    DROP POLICY IF EXISTS "Students can update their own requests" ON requests;
+    CREATE POLICY "Students can update their own requests" ON requests FOR UPDATE USING (auth.uid() = student_id);
+
+    DROP POLICY IF EXISTS "Runners can update requests they are assigned to" ON requests;
+    CREATE POLICY "Runners can update requests they are assigned to" ON requests FOR UPDATE USING (auth.uid() = runner_id);
+
+    DROP POLICY IF EXISTS "Runners can apply to requests" ON requests;
+    CREATE POLICY "Runners can apply to requests" ON requests FOR UPDATE USING (runner_id IS NULL);
+
+    -- Messages policies
+    DROP POLICY IF EXISTS "Participants can view messages" ON messages;
+    CREATE POLICY "Participants can view messages" ON messages FOR SELECT USING (auth.uid() IN (SELECT student_id FROM requests WHERE id = request_id) OR auth.uid() IN (SELECT runner_id FROM requests WHERE id = request_id));
+
+    DROP POLICY IF EXISTS "Participants can send messages" ON messages;
+    CREATE POLICY "Participants can send messages" ON messages FOR INSERT WITH CHECK (auth.uid() IN (SELECT student_id FROM requests WHERE id = request_id) OR auth.uid() IN (SELECT runner_id FROM requests WHERE id = request_id));
+END $$;
 
 -- Functions
 
