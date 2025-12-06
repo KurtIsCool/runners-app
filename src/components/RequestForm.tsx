@@ -109,6 +109,15 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
                   </button>
                 ))}
               </div>
+
+              <button
+                type="button"
+                onClick={() => setFormData({...formData, type: 'custom'})}
+                className={`mt-2 w-full p-3 rounded-xl border flex items-center justify-center gap-3 transition-all btn-press ${formData.type === 'custom' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-300'}`}
+              >
+                <span className="text-xl">✨</span>
+                <span className="font-bold text-sm">Custom Errand</span>
+              </button>
             </div>
 
             <div className="space-y-3">
