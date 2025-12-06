@@ -14,6 +14,7 @@ ALTER TABLE requests ADD COLUMN IF NOT EXISTS student_comment TEXT;
 ALTER TABLE requests ADD COLUMN IF NOT EXISTS payment_proof_url TEXT;
 ALTER TABLE requests ADD COLUMN IF NOT EXISTS payment_ref TEXT;
 ALTER TABLE requests ADD COLUMN IF NOT EXISTS is_paid BOOLEAN DEFAULT FALSE;
+ALTER TABLE requests ADD COLUMN IF NOT EXISTS payment_method TEXT; -- 'gcash' or 'cash'
 
 -- Update status check constraint if it exists (Supabase/Postgres enum handling depends on setup, often just text check)
 -- If status is an enum type:

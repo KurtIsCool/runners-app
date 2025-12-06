@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, CheckCircle, DollarSign, Navigation, Star, X, Package, Copy, MessageCircle, Phone, MapPin, User as UserIcon, QrCode } from 'lucide-react';
+import { Clock, CheckCircle, DollarSign, Navigation, Star, X, Package, Copy, MessageCircle, Phone, MapPin, User as UserIcon, QrCode, Banknote, Smartphone } from 'lucide-react';
 import { type Request, type RequestStatus, type UserProfile } from '../types';
 import ChatBox from './ChatBox';
 import MapViewer from './MapViewer';
@@ -143,6 +143,27 @@ interface RequestTrackerProps {
 const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: RequestTrackerProps) => {
     const [chatRequestId, setChatRequestId] = useState<string | null>(null);
     const [viewProofId, setViewProofId] = useState<string | null>(null);
+    const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
+
+    const handlePaymentSelection = async (method: 'gcash' | 'cash') => {
+        if (!acceptingRequestId) return;
+
+        let updateData: any = { payment_method: method };
+
+        if (method === 'gcash') {
+            updateData.status = 'awaiting_payment';
+        } else {
+            updateData.status = 'accepted';
+        }
+
+        const { error } = await supabase.from('requests').update(updateData).eq('id', acceptingRequestId);
+
+        if (error) {
+            alert('Error updating request');
+        } else {
+            setAcceptingRequestId(null);
+        }
+    };
 
     const getStatusBadge = (status: RequestStatus) => {
       const config = {
@@ -214,9 +235,7 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
                       <h4 className="font-bold text-indigo-900 text-sm mb-2 flex items-center gap-2"><UserIcon size={16}/> Runner Applied</h4>
                       <p className="text-xs text-indigo-700 mb-4">A runner has offered to take this job. Do you want to accept them?</p>
                       <button
-                          onClick={async () => {
-                              await supabase.from('requests').update({ status: 'awaiting_payment' }).eq('id', req.id);
-                          }}
+                          onClick={() => setAcceptingRequestId(req.id)}
                           className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 btn-press"
                       >
                           Accept Runner
@@ -225,8 +244,8 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
               )}
 
               {/* Payment Section */}
-              {/* Show payment section if awaiting payment or review. Also show if accepted but not paid (shouldn't happen in happy path but safety). */}
-              {((req.status === 'awaiting_payment' || req.status === 'payment_review') || (req.status === 'accepted' && !req.is_paid)) && req.runner_id && (
+              {/* Show payment section if awaiting payment or review. Only if method is GCash. */}
+              {((req.status === 'awaiting_payment' || req.status === 'payment_review') || (req.status === 'accepted' && !req.is_paid && req.payment_method === 'gcash')) && req.runner_id && (
                   <div className="mb-4">
                       <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                           <h4 className="font-bold text-blue-900 text-sm mb-3 uppercase flex items-center gap-2"><DollarSign size={16}/> Payment Required</h4>
@@ -296,6 +315,54 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
             <div className="fixed inset-0 z-[60] bg-black flex items-center justify-center p-4 pop-in" onClick={() => setViewProofId(null)}>
                 <img src={requests.find(r => r.id === viewProofId)?.proof_url} alt="Proof Fullscreen" className="max-w-full max-h-full object-contain" />
                 <button className="absolute top-4 right-4 text-white bg-white/20 p-2 rounded-full"><X/></button>
+            </div>
+        )}
+
+        {/* Payment Selection Modal */}
+        {acceptingRequestId && (
+            <div className="fixed inset-0 z-[70] bg-black/60 flex items-center justify-center p-4 pop-in">
+                <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl scale-100 transition-all">
+                    <div className="p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-bold text-lg text-gray-900">Select Payment Method</h3>
+                            <button onClick={() => setAcceptingRequestId(null)} className="bg-gray-100 p-1.5 rounded-full hover:bg-gray-200 transition-all text-gray-600"><X size={16}/></button>
+                        </div>
+                        <p className="text-sm text-gray-500 mb-6">How would you like to pay for this errand?</p>
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => handlePaymentSelection('gcash')}
+                                className="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl p-4 flex items-center justify-between group transition-all"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-blue-600 text-white p-2 rounded-lg">
+                                        <Smartphone size={20} />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="font-bold text-gray-900">GCash (Pay Now)</div>
+                                        <div className="text-[10px] text-gray-500">Upload proof of payment</div>
+                                    </div>
+                                </div>
+                                <div className="h-4 w-4 rounded-full border-2 border-gray-300 group-hover:border-blue-500 transition-colors"></div>
+                            </button>
+
+                            <button
+                                onClick={() => handlePaymentSelection('cash')}
+                                className="w-full bg-green-50 hover:bg-green-100 border border-green-200 rounded-xl p-4 flex items-center justify-between group transition-all"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-green-600 text-white p-2 rounded-lg">
+                                        <Banknote size={20} />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="font-bold text-gray-900">Cash (COD)</div>
+                                        <div className="text-[10px] text-gray-500">Pay runner upon delivery</div>
+                                    </div>
+                                </div>
+                                <div className="h-4 w-4 rounded-full border-2 border-gray-300 group-hover:border-green-500 transition-colors"></div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         )}
       </div>

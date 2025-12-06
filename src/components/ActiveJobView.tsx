@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera, X } from 'lucide-react';
+import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera, X, Banknote, Smartphone } from 'lucide-react';
 import AppLogo from './AppLogo';
 import { type Request, type UserProfile, type RequestStatus } from '../types';
 import ChatBox from './ChatBox';
@@ -51,6 +51,23 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
         setVerifyingPayment(false);
     };
 
+    const rejectPayment = async () => {
+        const reason = prompt("Enter rejection reason (optional):");
+        if (reason === null) return;
+
+        setVerifyingPayment(true);
+        const { error } = await supabase.from('requests').update({
+            status: 'awaiting_payment',
+            // Optional: You might want to clear the proof url or keep it for record. Keeping for now but resetting status.
+            student_comment: reason ? `Payment Rejected: ${reason}` : 'Payment Rejected'
+        }).eq('id', job.id);
+
+        if (error) {
+            alert("Failed to reject payment");
+        }
+        setVerifyingPayment(false);
+    };
+
     const handleProofUpload = async (url: string) => {
         setProofUrl(url);
         const { error } = await supabase.from('requests').update({ proof_url: url }).eq('id', job.id);
@@ -93,7 +110,11 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
                <h2 className="text-xl font-bold capitalize mb-1">{job.type}</h2>
                <div className="flex items-center gap-2 text-blue-200 text-xs">
                    <span>Order for {studentName}</span>
-                   <button onClick={() => setShowPayment(true)} className="ml-auto flex items-center gap-1 bg-blue-800 hover:bg-blue-700 px-2 py-0.5 rounded text-[10px] text-white btn-press"><QrCode size={10} /> GCash</button>
+                   {job.payment_method === 'gcash' ? (
+                       <button onClick={() => setShowPayment(true)} className="ml-auto flex items-center gap-1 bg-blue-800 hover:bg-blue-700 px-2 py-0.5 rounded text-[10px] text-white btn-press"><Smartphone size={10} /> GCash Order</button>
+                   ) : (
+                       <div className="ml-auto flex items-center gap-1 bg-green-800 px-2 py-0.5 rounded text-[10px] text-white"><Banknote size={10} /> Cash Order</div>
+                   )}
                </div>
              </div>
           </div>
@@ -148,17 +169,22 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
                  </div>
              )}
 
-             {/* Payment Verification Section */}
-             {(job.status === 'payment_review' || (job.status === 'accepted' && !job.is_paid)) && (
+             {/* Payment Verification Section - Only for GCash */}
+             {job.payment_method === 'gcash' && (job.status === 'payment_review' || (job.status === 'accepted' && !job.is_paid)) && (
                 <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 animate-pulse">
                     <h3 className="font-bold text-orange-800 text-sm mb-2 flex items-center gap-2"><CheckCircle size={16}/> Payment Verification</h3>
                     {job.payment_proof_url ? (
                         <div>
                             <p className="text-xs text-orange-700 mb-2">Student has submitted payment. Please verify.</p>
                             <button onClick={() => setShowPaymentProof(true)} className="w-full bg-white border border-orange-200 text-orange-700 font-bold py-2 rounded-lg text-xs mb-2 hover:bg-orange-100">View Receipt</button>
-                            <button onClick={confirmPayment} disabled={verifyingPayment} className="w-full bg-orange-600 text-white font-bold py-3 rounded-lg text-sm hover:bg-orange-700 btn-press">
-                                {verifyingPayment ? 'Verifying...' : 'Confirm Payment Received'}
-                            </button>
+                            <div className="flex gap-2 mt-2">
+                                <button onClick={rejectPayment} disabled={verifyingPayment} className="flex-1 bg-red-100 text-red-700 font-bold py-3 rounded-lg text-sm hover:bg-red-200 btn-press">
+                                    Reject
+                                </button>
+                                <button onClick={confirmPayment} disabled={verifyingPayment} className="flex-[2] bg-orange-600 text-white font-bold py-3 rounded-lg text-sm hover:bg-orange-700 btn-press">
+                                    {verifyingPayment ? 'Verifying...' : 'Confirm Received'}
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <p className="text-xs text-orange-700">Waiting for student to transfer payment...</p>
@@ -189,11 +215,11 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
           <div className="p-4 border-t bg-white pb-safe-nav shrink-0">
              {job.status === 'accepted' && (
                  <button
-                    disabled={updating || !job.is_paid}
+                    disabled={updating || (job.payment_method === 'gcash' && !job.is_paid)}
                     onClick={() => handleStatusUpdate('purchasing')}
                     className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-base hover:bg-blue-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                  >
-                    {updating ? <Loader2 className="animate-spin"/> : !job.is_paid ? 'Wait for Payment' : <>Start Purchasing <ArrowRight size={18}/></>}
+                    {updating ? <Loader2 className="animate-spin"/> : (job.payment_method === 'gcash' && !job.is_paid) ? 'Wait for Payment' : <>Start Purchasing <ArrowRight size={18}/></>}
                  </button>
              )}
              {job.status === 'purchasing' && <button disabled={updating} onClick={() => handleStatusUpdate('delivering')} className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold text-base hover:bg-purple-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-purple-200">{updating ? <Loader2 className="animate-spin"/> : <>Start Delivering <AppLogo className="h-5 w-5 text-white" /></>}</button>}
