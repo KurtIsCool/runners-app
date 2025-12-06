@@ -1,6 +1,19 @@
 export type UserRole = 'student' | 'runner';
-// Added 'delivered' and 'disputed' to statuses
-export type RequestStatus = 'requested' | 'pending_runner' | 'awaiting_payment' | 'payment_review' | 'accepted' | 'purchasing' | 'delivering' | 'delivered' | 'completed' | 'cancelled' | 'disputed';
+
+// Updated Canonical Status List
+export type MissionStatus =
+  | 'requested'
+  | 'pending_runner_confirmation'
+  | 'runner_selected'
+  | 'awaiting_payment'
+  | 'payment_submitted'
+  | 'payment_verified'
+  | 'active_mission'
+  | 'proof_submitted'
+  | 'awaiting_student_confirmation'
+  | 'completed'
+  | 'disputed'
+  | 'cancelled';
 
 export interface UserProfile {
   id: string;
@@ -11,16 +24,15 @@ export interface UserProfile {
   is_verified?: boolean;
   school_id_url?: string;
   payment_qr_url?: string;
-  payment_number?: string; // GCash Number
+  payment_number?: string;
   avatar_url?: string;
-  // New fields
-  history?: string[]; // Array of request IDs or simple summary (we might not store this in user row, but useful for frontend cache)
+  history?: string[];
   student_rating?: number;
   runner_rating?: number;
   total_reviews?: number;
 }
 
-export interface Request {
+export interface Mission {
   id: string;
   student_id: string;
   runner_id?: string;
@@ -28,18 +40,25 @@ export interface Request {
   pickup_address: string;
   dropoff_address: string;
   details: string;
-  price_estimate: number; // This can now represent the Total or just the Fee?
-                          // Recommendation: Keep as Total (Fee + Item Cost) for backward compat or ease of display,
-                          // OR strictly Fee (49).
-                          // Given the user said "49 is fixed", let's make `price_estimate` the FEE (49) and add `item_cost`.
-                          // But wait, existing code sums `price_estimate` for earnings.
-                          // If `price_estimate` becomes Fee (49), then logic holds.
-                          // We add `item_cost` for the extra amount.
 
-  item_cost?: number; // New field
+  // Costs
+  price_estimate: number; // Total Price (Item Cost + Fee) or just Fee? Code seems to treat it as total.
+  item_cost?: number; // User provided cost
 
-  status: RequestStatus;
+  status: MissionStatus;
+  payment_status: 'unpaid' | 'submitted' | 'verified';
+
   created_at: string;
+
+  // Timestamps
+  applied_at?: string;
+  runner_selected_at?: string;
+  payment_submitted_at?: string;
+  payment_verified_at?: string;
+  active_at?: string;
+  proof_submitted_at?: string;
+  delivery_confirmed_at?: string;
+  completed_at?: string;
 
   // Locations
   pickup_lat?: number;
@@ -47,30 +66,32 @@ export interface Request {
   dropoff_lat?: number;
   dropoff_lng?: number;
 
-  // Deprecated but keeping for compatibility if needed, or mapped to pickup/dropoff
-  lat?: number;
-  lng?: number;
-
-  // Proof & Completion
+  // Proofs
   proof_url?: string;
-  confirmed_at?: string;
-
-  // Payment
   payment_proof_url?: string;
   payment_ref?: string;
-  is_paid?: boolean;
 
   // Ratings
-  rating?: number; // keeping for backward compat, maybe alias to runner_rating
-  runner_rating?: number; // Rating given TO the runner
-  student_rating?: number; // Rating given TO the student
+  rating?: number; // Legacy compatibility
+  runner_rating?: number;
+  student_rating?: number;
   runner_comment?: string;
   student_comment?: string;
 }
 
+export interface MissionApplicant {
+  id: string;
+  mission_id: string;
+  runner_id: string;
+  applied_at: string;
+  message?: string;
+  // Join fields usually fetched
+  runner?: UserProfile;
+}
+
 export interface Message {
   id: string;
-  request_id: string;
+  mission_id: string; // Changed from request_id for consistency if we rename
   sender_id: string;
   text: string;
   created_at: string;

@@ -4,7 +4,7 @@ import MapPicker from './MapPicker';
 import { reverseGeocode } from '../lib/geocoding';
 
 // Define the type for the form data
-interface RequestFormData {
+interface MissionFormData {
     type: string;
     pickup_address: string;
     dropoff_address: string;
@@ -17,7 +17,7 @@ interface RequestFormData {
     dropoff_lng: number;
 }
 
-interface RequestFormProps {
+interface MissionFormProps {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onSubmit: (data: any) => Promise<void>;
     onCancel: () => void;
@@ -25,9 +25,9 @@ interface RequestFormProps {
 
 type LocationMode = 'pickup' | 'dropoff' | null;
 
-const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
+const MissionForm = ({ onSubmit, onCancel }: MissionFormProps) => {
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState<RequestFormData & { item_cost: string }>({
+    const [formData, setFormData] = useState<MissionFormData & { item_cost: string }>({
       type: 'food',
       pickup_address: '',
       dropoff_address: '',
@@ -84,7 +84,7 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
       <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm pop-in">
         <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl scale-100 transition-all max-h-[90vh] overflow-y-auto no-scrollbar">
           <div className="bg-white border-b border-gray-100 px-5 py-4 flex justify-between items-center sticky top-0 z-10">
-            <div><h3 className="font-bold text-lg text-gray-900">Create Request</h3><p className="text-gray-500 text-xs mt-0.5">What do you need help with?</p></div>
+            <div><h3 className="font-bold text-lg text-gray-900">Create Mission</h3><p className="text-gray-500 text-xs mt-0.5">What do you need help with?</p></div>
             <button onClick={onCancel} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition-all hover:rotate-90 text-gray-600"><X size={18}/></button>
           </div>
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
@@ -199,7 +199,7 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
             </div>
 
             <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-all btn-press shadow-xl shadow-blue-200 flex justify-center items-center gap-2 text-sm">
-              {loading ? <Loader2 className="animate-spin" size={18} /> : 'Post Request'}
+              {loading ? <Loader2 className="animate-spin" size={18} /> : 'Post Mission'}
             </button>
           </form>
         </div>
@@ -207,4 +207,4 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
     );
 };
 
-export default RequestForm;
+export default MissionForm;
