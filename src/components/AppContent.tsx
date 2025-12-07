@@ -26,6 +26,7 @@ interface AppContentProps {
   updateRequestStatus: (id: string, status: string) => Promise<void>;
   assignRequest: (id: string, runnerId: string) => Promise<void>;
   rateRequest: (id: string, rating: number, comment?: string) => Promise<void>;
+  cancelRequest: (id: string, reason: string) => Promise<void>;
   currentUserId: string;
 }
 
@@ -43,6 +44,7 @@ export default function AppContent({
   updateRequestStatus,
   assignRequest,
   rateRequest,
+  cancelRequest,
   currentUserId
 }: AppContentProps) {
 
@@ -104,6 +106,7 @@ export default function AppContent({
           userProfile={userProfile!}
           onViewProfile={setShowPublicProfileModal}
           onRateUser={setShowRatingModal}
+          onCancelRequest={cancelRequest}
         />
       );
     }
@@ -118,6 +121,7 @@ export default function AppContent({
             if (r > 0) rateRequest(req.id, r, c);
             else setShowRatingModal(req);
         }}
+        onCancel={(id, reason) => cancelRequest(id, reason)}
         onViewProfile={setShowPublicProfileModal}
       />
     );

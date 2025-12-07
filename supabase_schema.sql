@@ -22,6 +22,9 @@ ALTER TABLE requests ADD COLUMN IF NOT EXISTS service_fee NUMERIC DEFAULT 49;
 ALTER TABLE requests ADD COLUMN IF NOT EXISTS additional_cost NUMERIC DEFAULT 0;
 ALTER TABLE requests ADD COLUMN IF NOT EXISTS additional_cost_reason TEXT;
 
+-- Cancellation
+ALTER TABLE requests ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;
+
 -- Update status check constraint if it exists (Supabase/Postgres enum handling depends on setup, often just text check)
 -- If status is an enum type:
 -- ALTER TYPE request_status ADD VALUE 'delivered';

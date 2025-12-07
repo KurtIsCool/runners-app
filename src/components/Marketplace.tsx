@@ -25,7 +25,7 @@ const JobRequester = ({ studentId, onClick }: { studentId: string, onClick?: (id
     );
 }
 
-const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, userProfile, onViewProfile, onRateUser }: { requests: Request[], onClaim: (id: string) => Promise<void> | void, onUpdateStatus: (id: string, status: RequestStatus) => void, userId: string, onRefresh: () => void, userProfile: UserProfile, onViewProfile?: (userId: string) => void, onRateUser?: (req: Request) => void }) => {
+const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, userProfile, onViewProfile, onRateUser, onCancelRequest }: { requests: Request[], onClaim: (id: string) => Promise<void> | void, onUpdateStatus: (id: string, status: RequestStatus) => void, userId: string, onRefresh: () => void, userProfile: UserProfile, onViewProfile?: (userId: string) => void, onRateUser?: (req: Request) => void, onCancelRequest?: (id: string, reason: string) => void }) => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [viewActiveJob, setViewActiveJob] = useState(false);
     const handleRefresh = async () => { setIsRefreshing(true); await onRefresh(); setTimeout(() => setIsRefreshing(false), 500); };
@@ -58,7 +58,7 @@ const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, use
     };
 
     if (viewActiveJob && myActiveJob) {
-        return <ActiveJobView job={myActiveJob} userId={userId} onUpdateStatus={onUpdateStatus} userProfile={userProfile} onClose={() => setViewActiveJob(false)} onRateUser={onRateUser} />;
+        return <ActiveJobView job={myActiveJob} userId={userId} onUpdateStatus={onUpdateStatus} userProfile={userProfile} onClose={() => setViewActiveJob(false)} onRateUser={onRateUser} onCancel={onCancelRequest} />;
     }
 
     const openRequests = requests.filter(r => r.status === 'requested');
