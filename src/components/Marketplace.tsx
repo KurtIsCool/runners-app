@@ -88,7 +88,12 @@ const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, use
               <div key={req.id} style={{animationDelay: `${i*100}ms`}} className={`stagger-enter bg-white rounded-2xl shadow-sm border border-gray-100 hover-lift transition-all duration-200 p-5 group ${myActiveJob ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
                 <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                        <div className="bg-blue-50 p-3 rounded-xl text-2xl">{req.type === 'food' ? '🍔' : req.type === 'printing' ? '🖨️' : '📦'}</div>
+                        <div className="bg-blue-50 p-3 rounded-xl text-2xl">
+                          {req.type === 'food' ? '🍔' :
+                           req.type === 'printing' ? '🖨️' :
+                           req.type === 'groceries' ? '🛒' :
+                           req.type === 'custom' ? '✨' : '📦'}
+                        </div>
                         <div>
                             <h3 className="font-bold text-lg text-gray-900 capitalize leading-none">{req.type}</h3>
                             <JobRequester studentId={req.student_id} onClick={onViewProfile} />

@@ -108,7 +108,8 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
                   { id: 'food', emoji: '🍔', label: 'Food' },
                   { id: 'printing', emoji: '🖨️', label: 'Print' },
                   { id: 'groceries', emoji: '🛒', label: 'Shop' },
-                  { id: 'transport', emoji: '📦', label: 'Parcel' }
+                  { id: 'transport', emoji: '📦', label: 'Parcel' },
+                  { id: 'custom', emoji: '✨', label: 'Custom' }
                 ].map(item => (
                   <button
                     key={item.id}
