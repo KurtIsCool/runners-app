@@ -65,6 +65,7 @@ export interface Request {
   student_rating?: number; // Rating given TO the student
   runner_comment?: string;
   student_comment?: string;
+  cancellation_reason?: string;
 }
 
 export interface Message {

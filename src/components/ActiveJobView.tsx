@@ -6,7 +6,7 @@ import ChatBox from './ChatBox';
 import ProofUpload from './ProofUpload';
 import { supabase } from '../lib/supabase';
 
-const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRateUser }: { job: Request, userId: string, onUpdateStatus: (id: string, status: RequestStatus) => void, userProfile: UserProfile, onClose: () => void, onRateUser?: (req: Request) => void }) => {
+const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRateUser, onCancel }: { job: Request, userId: string, onUpdateStatus: (id: string, status: RequestStatus) => void, userProfile: UserProfile, onClose: () => void, onRateUser?: (req: Request) => void, onCancel?: (id: string, reason: string) => void }) => {
     const [updating, setUpdating] = useState(false);
     const [showPayment, setShowPayment] = useState(false);
     const [studentName, setStudentName] = useState<string>('Student');
@@ -66,6 +66,17 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
             alert("Failed to reject payment");
         }
         setVerifyingPayment(false);
+    };
+
+    const handleCancel = async () => {
+        const reason = window.prompt("Please state the reason for cancellation:");
+        if (reason === null || !reason.trim()) return;
+        if (onCancel) {
+             setUpdating(true);
+             await onCancel(job.id, reason);
+             setUpdating(false);
+             onClose();
+        }
     };
 
     const handleProofUpload = async (url: string) => {
@@ -245,9 +256,16 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
 
         {/* Right Side: Chat Box */}
         <div className="flex-1 flex flex-col md:h-full border-t md:border-t-0 md:border-l h-[55vh] order-2 bg-gray-50">
-           <div className="bg-white px-4 py-3 border-b flex items-center gap-3 shadow-sm z-10 shrink-0">
-               <div className="bg-green-100 p-2 rounded-full"><MessageCircle className="text-green-600" size={20}/></div>
-               <div><div className="font-bold text-gray-900 text-sm">Chat with {studentName}</div><div className="text-[10px] text-gray-500">Coordinate details here</div></div>
+           <div className="bg-white px-4 py-3 border-b flex items-center justify-between gap-3 shadow-sm z-10 shrink-0">
+               <div className="flex items-center gap-3">
+                   <div className="bg-green-100 p-2 rounded-full"><MessageCircle className="text-green-600" size={20}/></div>
+                   <div><div className="font-bold text-gray-900 text-sm">Chat with {studentName}</div><div className="text-[10px] text-gray-500">Coordinate details here</div></div>
+               </div>
+               {onCancel && ['requested', 'pending_runner', 'accepted', 'awaiting_payment', 'payment_review'].includes(job.status) && (
+                   <button onClick={handleCancel} disabled={updating} className="bg-red-50 text-red-600 p-2 rounded-full hover:bg-red-100 transition-colors btn-press">
+                       <X size={20} />
+                   </button>
+               )}
            </div>
            <div className="flex-1 relative overflow-hidden">
                <div className="absolute inset-0">

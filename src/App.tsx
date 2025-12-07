@@ -261,6 +261,28 @@ export default function App() {
     await supabase.from('requests').update(updateData).eq('id', id);
   };
 
+  const cancelRequest = async (id: string, reason: string) => {
+    // Only allow cancellation for specific statuses
+    const { data: req } = await supabase.from('requests').select('status').eq('id', id).single();
+    if (!req) return;
+
+    const allowedStatuses = ['requested', 'pending_runner', 'accepted', 'awaiting_payment', 'payment_review'];
+    if (!allowedStatuses.includes(req.status)) {
+        alert("Cannot cancel request in this status.");
+        return;
+    }
+
+    const { error } = await supabase.from('requests').update({
+        status: 'cancelled',
+        cancellation_reason: reason
+    }).eq('id', id);
+
+    if (error) {
+        console.error("Cancellation failed:", error);
+        alert("Failed to cancel request.");
+    }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600"/></div>;
   
   if (!user) return (
@@ -298,6 +320,7 @@ export default function App() {
             updateRequestStatus={updateRequestStatus}
             assignRequest={assignRequest}
             rateRequest={rateRequest}
+            cancelRequest={cancelRequest}
             currentUserId={user.id}
           />
         </Layout>

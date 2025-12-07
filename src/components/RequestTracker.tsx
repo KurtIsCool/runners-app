@@ -138,9 +138,10 @@ interface RequestTrackerProps {
     currentUserId: string;
     onRate: (req: Request, rating: number, comment?: string) => void;
     onViewProfile?: (userId: string) => void;
+    onCancel?: (id: string, reason: string) => void;
 }
 
-const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: RequestTrackerProps) => {
+const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile, onCancel }: RequestTrackerProps) => {
     const [chatRequestId, setChatRequestId] = useState<string | null>(null);
     const [viewProofId, setViewProofId] = useState<string | null>(null);
     const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
@@ -193,6 +194,12 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
         if (reason === null) return; // Cancelled
         const { error } = await supabase.from('requests').update({ status: 'disputed', student_comment: reason }).eq('id', id);
         if (error) alert('Error disputing request');
+    };
+
+    const handleCancel = async (id: string) => {
+        const reason = window.prompt("Please state the reason for cancellation:");
+        if (reason === null || !reason.trim()) return;
+        if (onCancel) onCancel(id, reason);
     };
 
     const activeRequests = requests.filter(r => r.status !== 'cancelled' && r.status !== 'completed');
@@ -295,7 +302,12 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
                         ) : 'Estimated Total'}
                       </div>
                   </div>
-                  {req.status !== 'requested' && (<div className="flex gap-2"><button onClick={() => setChatRequestId(req.id)} className="flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-200 btn-press"><MessageCircle size={18} /> Chat</button><button className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 btn-press"><Phone size={18} /> Call</button></div>)}
+                  <div className="flex gap-2">
+                    {req.status !== 'requested' && (<><button onClick={() => setChatRequestId(req.id)} className="flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-2 rounded-lg font-bold text-sm hover:bg-blue-200 btn-press"><MessageCircle size={18} /> Chat</button><button className="flex items-center gap-2 bg-gray-100 text-gray-700 px-3 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 btn-press"><Phone size={18} /> Call</button></>)}
+                    {['requested', 'pending_runner', 'accepted', 'awaiting_payment', 'payment_review'].includes(req.status) && (
+                        <button onClick={() => handleCancel(req.id)} className="flex items-center gap-2 bg-red-50 text-red-600 px-3 py-2 rounded-lg font-bold text-sm hover:bg-red-100 btn-press"><X size={18}/> Cancel</button>
+                    )}
+                  </div>
               </div>
             </div>
             <div className="h-1.5 bg-gray-100 w-full">
@@ -310,7 +322,7 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile }: Requ
             </div>
           </div>
         ))}
-        {pastRequests.length > 0 && <div className="pt-8 border-t stagger-enter" style={{animationDelay: '200ms'}}><h3 className="text-lg font-bold text-gray-600 mb-4">Past Errands</h3><div className="space-y-4">{pastRequests.map((req, i) => (<div key={req.id} style={{animationDelay: `${i*50}ms`}} className="stagger-enter bg-gray-50 rounded-xl p-4 flex justify-between items-center hover:bg-gray-100 transition-colors hover-lift"><div><div className="flex items-center gap-2"><span className="font-bold capitalize text-gray-900">{req.type}</span>{req.rating && <span className="flex items-center text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-bold"><Star size={10} className="fill-yellow-600 text-yellow-600 mr-1"/> {req.rating}</span>}</div><span className="text-gray-500 text-xs flex gap-2">{new Date(req.created_at).toLocaleDateString()} {req.runner_id && <RunnerInfo runnerId={req.runner_id} onClick={onViewProfile} />}</span></div>{!req.rating && req.status === 'completed' ? <button onClick={() => onRate(req, 0)} className="text-xs bg-black text-white px-3 py-1.5 rounded-lg font-bold hover:bg-gray-800 btn-press">Rate Now</button> : <div className="text-sm font-medium text-green-700 bg-green-100 px-2 py-1 rounded">{req.status === 'cancelled' ? 'Cancelled' : req.status === 'disputed' ? 'Disputed' : 'Done'}</div>}</div>))}</div></div>}
+        {pastRequests.length > 0 && <div className="pt-8 border-t stagger-enter" style={{animationDelay: '200ms'}}><h3 className="text-lg font-bold text-gray-600 mb-4">Past Errands</h3><div className="space-y-4">{pastRequests.map((req, i) => (<div key={req.id} style={{animationDelay: `${i*50}ms`}} className="stagger-enter bg-gray-50 rounded-xl p-4 flex justify-between items-center hover:bg-gray-100 transition-colors hover-lift"><div><div className="flex items-center gap-2"><span className="font-bold capitalize text-gray-900">{req.type}</span>{req.rating && <span className="flex items-center text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-bold"><Star size={10} className="fill-yellow-600 text-yellow-600 mr-1"/> {req.rating}</span>}</div><span className="text-gray-500 text-xs flex gap-2">{new Date(req.created_at).toLocaleDateString()} {req.runner_id && <RunnerInfo runnerId={req.runner_id} onClick={onViewProfile} />}</span>{req.status === 'cancelled' && req.cancellation_reason && <div className="text-[10px] text-red-500 mt-1">Reason: {req.cancellation_reason}</div>}</div>{!req.rating && req.status === 'completed' ? <button onClick={() => onRate(req, 0)} className="text-xs bg-black text-white px-3 py-1.5 rounded-lg font-bold hover:bg-gray-800 btn-press">Rate Now</button> : <div className={`text-sm font-medium px-2 py-1 rounded ${req.status === 'cancelled' ? 'text-red-700 bg-red-100' : req.status === 'disputed' ? 'text-red-700 bg-red-100' : 'text-green-700 bg-green-100'}`}>{req.status === 'cancelled' ? 'Cancelled' : req.status === 'disputed' ? 'Disputed' : 'Done'}</div>}</div>))}</div></div>}
 
         {chatRequestId && (<div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 pop-in"><div className="w-full max-w-md bg-white rounded-xl overflow-hidden relative"><button className="absolute top-2 right-2 text-white z-10" onClick={()=>setChatRequestId(null)}><X/></button><ChatBox requestId={chatRequestId} currentUserId={currentUserId} /></div></div>)}
 

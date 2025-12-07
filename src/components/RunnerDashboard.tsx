@@ -23,10 +23,11 @@ const StudentInfo = ({ studentId, onClick }: { studentId: string, onClick?: (id:
 }
 
 const RunnerDashboard = ({ requests, userId, onViewProfile, onRateUser }: { requests: Request[], userId: string, onViewProfile?: (userId: string) => void, onRateUser?: (req: Request) => void }) => {
-    const completed = requests.filter(r => r.runner_id === userId && r.status === 'completed');
+    const completed = requests.filter(r => r.runner_id === userId && (r.status === 'completed' || r.status === 'cancelled'));
     const disputed = requests.filter(r => r.runner_id === userId && r.status === 'disputed');
 
-    const earnings = completed.reduce((sum, r) => sum + (r.price_estimate || 0), 0);
+    // Only count earnings for actually completed jobs, not cancelled ones
+    const earnings = requests.filter(r => r.runner_id === userId && r.status === 'completed').reduce((sum, r) => sum + (r.price_estimate || 0), 0);
     // Use runner_rating if available, fallback to legacy rating
     const ratedJobs = completed.filter(r => r.runner_rating || r.rating);
     const avgRating = ratedJobs.length > 0 ? (ratedJobs.reduce((sum, r) => sum + (r.runner_rating || r.rating || 0), 0) / ratedJobs.length).toFixed(1) : 'New';
@@ -69,7 +70,7 @@ const RunnerDashboard = ({ requests, userId, onViewProfile, onRateUser }: { requ
           {completed.length === 0 ? (
             <div className="p-12 text-center text-gray-500">
               <div className="bg-gray-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"><CheckCircle className="text-gray-300" /></div>
-              No completed tasks yet.
+              No completed or cancelled tasks yet.
             </div>
           ) : (
             <div className="p-4 space-y-3 bg-gray-50/50">
@@ -89,9 +90,15 @@ const RunnerDashboard = ({ requests, userId, onViewProfile, onRateUser }: { requ
                       <span className="font-black text-green-600 bg-green-50 px-3 py-1 rounded-lg text-sm">+₱{job.price_estimate}</span>
                    </div>
 
+                   {job.status === 'cancelled' && job.cancellation_reason && (
+                       <div className="bg-red-50 text-red-600 p-2 rounded text-xs mb-2 mt-2">
+                           <strong>Cancelled:</strong> {job.cancellation_reason}
+                       </div>
+                   )}
+
                    <div className="flex items-center justify-between pt-3 border-t border-gray-50">
                       <div className="flex items-center gap-2">
-                        <div className={`h-2 w-2 rounded-full ${job.status === 'completed' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                        <div className={`h-2 w-2 rounded-full ${job.status === 'completed' ? 'bg-green-500' : job.status === 'cancelled' ? 'bg-red-500' : 'bg-gray-300'}`}></div>
                         <span className="text-xs font-bold uppercase tracking-wider text-gray-500">{job.status}</span>
                       </div>
 
