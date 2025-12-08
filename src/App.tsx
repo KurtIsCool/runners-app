@@ -263,7 +263,9 @@ export default function App() {
     };
 
     const { error } = await supabase.from('requests').insert(requestToInsert);
-    if (!error) { setShowRequestForm(false); setView('tracker'); }
+    if (error) throw error;
+    setShowRequestForm(false);
+    setView('tracker');
   };
 
   const updateRequestStatus = async (id: string, status: string) => {
