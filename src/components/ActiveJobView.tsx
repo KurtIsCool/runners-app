@@ -1,17 +1,25 @@
 import { useState, useEffect } from 'react';
-import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera, X, Banknote, Smartphone } from 'lucide-react';
+import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera, X, Banknote, Smartphone, Store, Receipt } from 'lucide-react';
 import AppLogo from './AppLogo';
 import { type Request, type UserProfile, type RequestStatus } from '../types';
 import ChatBox from './ChatBox';
 import ProofUpload from './ProofUpload';
 import { supabase } from '../lib/supabase';
 
+type UploadType = 'none' | 'arrival' | 'receipt' | 'delivery';
+
 const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRateUser, onCancel }: { job: Request, userId: string, onUpdateStatus: (id: string, status: RequestStatus) => void, userProfile: UserProfile, onClose: () => void, onRateUser?: (req: Request) => void, onCancel?: (id: string, reason: string) => void }) => {
     const [updating, setUpdating] = useState(false);
     const [showPayment, setShowPayment] = useState(false);
     const [studentName, setStudentName] = useState<string>('Student');
+
+    // Photo states
     const [proofUrl, setProofUrl] = useState<string | null>(job.proof_url || null);
-    const [showProofUpload, setShowProofUpload] = useState(false);
+    const [arrivalPhotoUrl, setArrivalPhotoUrl] = useState<string | null>(job.arrival_photo_url || null);
+    const [receiptPhotoUrl, setReceiptPhotoUrl] = useState<string | null>(job.receipt_photo_url || null);
+
+    const [uploadModalType, setUploadModalType] = useState<UploadType>('none');
+
     const [verifyingPayment, setVerifyingPayment] = useState(false);
     const [showPaymentProof, setShowPaymentProof] = useState(false);
 
@@ -24,17 +32,6 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
         };
         fetchStudentName();
     }, [job.student_id]);
-
-    const handleStatusUpdate = async (status: RequestStatus) => {
-        setUpdating(true);
-        try {
-            await onUpdateStatus(job.id, status);
-        } catch {
-            alert("Failed to update status.");
-        } finally {
-            setUpdating(false);
-        }
-    };
 
     const confirmPayment = async () => {
         if (!confirm("Confirm that you have received the payment?")) return;
@@ -58,7 +55,6 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
         setVerifyingPayment(true);
         const { error } = await supabase.from('requests').update({
             status: 'awaiting_payment',
-            // Optional: You might want to clear the proof url or keep it for record. Keeping for now but resetting status.
             student_comment: reason ? `Payment Rejected: ${reason}` : 'Payment Rejected'
         }).eq('id', job.id);
 
@@ -79,24 +75,61 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
         }
     };
 
-    const handleProofUpload = async (url: string) => {
-        setProofUrl(url);
-        const { error } = await supabase.from('requests').update({ proof_url: url }).eq('id', job.id);
+    // Generic handler for all uploads
+    const handlePhotoUpload = async (url: string) => {
+        let updateData: Partial<Request> = {};
+
+        if (uploadModalType === 'arrival') {
+            setArrivalPhotoUrl(url);
+            updateData = { arrival_photo_url: url };
+        } else if (uploadModalType === 'receipt') {
+            setReceiptPhotoUrl(url);
+            updateData = { receipt_photo_url: url };
+        } else if (uploadModalType === 'delivery') {
+            setProofUrl(url);
+            updateData = { proof_url: url };
+        }
+
+        const { error } = await supabase.from('requests').update(updateData).eq('id', job.id);
         if (error) {
-            alert('Failed to save proof image');
+            alert('Failed to save image');
         }
     };
 
-    const submitDelivery = async () => {
-        if (!proofUrl) {
-            alert("Please upload a proof of delivery first.");
-            return;
-        }
+    const handleSubmitWithPhoto = async () => {
         setUpdating(true);
-        await onUpdateStatus(job.id, 'delivered');
-        setShowProofUpload(false);
-        setUpdating(false);
+        try {
+            if (uploadModalType === 'arrival') {
+                // Moving to 'purchasing'
+                if (!arrivalPhotoUrl) throw new Error("Please upload arrival photo");
+                await onUpdateStatus(job.id, 'purchasing');
+            } else if (uploadModalType === 'receipt') {
+                // Moving to 'delivering'
+                if (!receiptPhotoUrl) throw new Error("Please upload receipt photo");
+                await onUpdateStatus(job.id, 'delivering');
+            } else if (uploadModalType === 'delivery') {
+                // Moving to 'delivered'
+                if (!proofUrl) throw new Error("Please upload proof of delivery");
+                await onUpdateStatus(job.id, 'delivered');
+            }
+            setUploadModalType('none');
+        } catch (e: any) {
+            alert(e.message || "Error updating status");
+        } finally {
+            setUpdating(false);
+        }
     };
+
+    // Determine current photo for modal
+    const currentUploadUrl =
+        uploadModalType === 'arrival' ? arrivalPhotoUrl :
+        uploadModalType === 'receipt' ? receiptPhotoUrl :
+        uploadModalType === 'delivery' ? proofUrl : undefined;
+
+    const modalTitle =
+        uploadModalType === 'arrival' ? "Upload Store Arrival Photo" :
+        uploadModalType === 'receipt' ? "Upload Receipt / Purchase Proof" :
+        "Upload Proof of Delivery";
 
     return (
       <div className="fixed inset-0 bg-gray-100 z-[60] flex flex-col md:flex-row pop-in">
@@ -219,10 +252,27 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
              </div>
              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 stagger-enter shadow-sm"><div className="text-[10px] font-bold text-blue-500 uppercase mb-1">Instructions</div><p className="text-gray-800 text-sm">{job.details}</p></div>
 
-             {proofUrl && (
-                 <div className="bg-green-50 p-3 rounded-xl border border-green-100">
-                     <p className="text-[10px] font-bold text-green-700 uppercase mb-2">Proof of Delivery Uploaded</p>
-                     <img src={proofUrl} alt="Proof" className="w-full h-32 object-cover rounded-lg" />
+             {/* Photos Section */}
+             {(arrivalPhotoUrl || receiptPhotoUrl || proofUrl) && (
+                 <div className="space-y-2">
+                     {arrivalPhotoUrl && (
+                        <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-1"><Store size={10}/> Store Arrival Photo</p>
+                            <img src={arrivalPhotoUrl} alt="Store Arrival" className="w-full h-32 object-cover rounded-lg" />
+                        </div>
+                     )}
+                     {receiptPhotoUrl && (
+                        <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-1"><Receipt size={10}/> Purchase Receipt</p>
+                            <img src={receiptPhotoUrl} alt="Receipt" className="w-full h-32 object-cover rounded-lg" />
+                        </div>
+                     )}
+                     {proofUrl && (
+                         <div className="bg-green-50 p-3 rounded-xl border border-green-100">
+                             <p className="text-[10px] font-bold text-green-700 uppercase mb-2 flex items-center gap-1"><CheckCircle size={10}/> Proof of Delivery</p>
+                             <img src={proofUrl} alt="Proof" className="w-full h-32 object-cover rounded-lg" />
+                         </div>
+                     )}
                  </div>
              )}
           </div>
@@ -231,14 +281,33 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
              {job.status === 'accepted' && (
                  <button
                     disabled={updating || (job.payment_method === 'gcash' && !job.is_paid)}
-                    onClick={() => handleStatusUpdate('purchasing')}
+                    onClick={() => setUploadModalType('arrival')}
                     className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-base hover:bg-blue-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                  >
                     {updating ? <Loader2 className="animate-spin"/> : (job.payment_method === 'gcash' && !job.is_paid) ? 'Wait for Payment' : <>Start Purchasing <ArrowRight size={18}/></>}
                  </button>
              )}
-             {job.status === 'purchasing' && <button disabled={updating} onClick={() => handleStatusUpdate('delivering')} className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold text-base hover:bg-purple-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-purple-200">{updating ? <Loader2 className="animate-spin"/> : <>Start Delivering <AppLogo className="h-5 w-5 text-white" /></>}</button>}
-             {job.status === 'delivering' && <button disabled={updating} onClick={() => setShowProofUpload(true)} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-base hover:bg-green-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-green-200">{updating ? <Loader2 className="animate-spin"/> : <>Upload Proof & Finish <Camera size={18}/></>}</button>}
+
+             {job.status === 'purchasing' && (
+                <button
+                    disabled={updating}
+                    onClick={() => setUploadModalType('receipt')}
+                    className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold text-base hover:bg-purple-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-purple-200"
+                >
+                    {updating ? <Loader2 className="animate-spin"/> : <>Start Delivering <AppLogo className="h-5 w-5 text-white" /></>}
+                </button>
+             )}
+
+             {job.status === 'delivering' && (
+                <button
+                    disabled={updating}
+                    onClick={() => setUploadModalType('delivery')}
+                    className="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-base hover:bg-green-700 flex items-center justify-center gap-2 btn-press shadow-lg shadow-green-200"
+                >
+                    {updating ? <Loader2 className="animate-spin"/> : <>Upload Proof & Finish <Camera size={18}/></>}
+                </button>
+             )}
+
              {job.status === 'delivered' && <div className="w-full bg-yellow-100 text-yellow-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center">Waiting for Student Confirmation</div>}
              {job.status === 'disputed' && <div className="w-full bg-red-100 text-red-800 py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 text-center animate-pulse">⚠️ Task Disputed. Contact Support.</div>}
              {job.status === 'completed' && (
@@ -297,14 +366,26 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
              </div>
         )}
 
-        {showProofUpload && (
-             <div className="absolute inset-0 z-[80] bg-black/50 flex items-center justify-center p-4">
+        {uploadModalType !== 'none' && (
+             <div className="absolute inset-0 z-[80] bg-black/50 flex items-center justify-center p-4 pop-in">
                  <div className="bg-white p-6 rounded-2xl w-full max-w-sm">
-                     <h3 className="font-bold text-lg mb-4">Complete Delivery</h3>
-                     <ProofUpload onUpload={handleProofUpload} currentUrl={proofUrl || undefined} />
+                     <h3 className="font-bold text-lg mb-4">{modalTitle}</h3>
+                     <p className="text-sm text-gray-500 mb-4">Please upload a photo to proceed.</p>
+
+                     <ProofUpload
+                        onUpload={handlePhotoUpload}
+                        currentUrl={currentUploadUrl || undefined}
+                     />
+
                      <div className="flex gap-2 mt-4">
-                         <button onClick={() => setShowProofUpload(false)} className="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-600">Cancel</button>
-                         <button onClick={submitDelivery} disabled={!proofUrl || updating} className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold disabled:opacity-50">Submit Proof</button>
+                         <button onClick={() => setUploadModalType('none')} className="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-600">Cancel</button>
+                         <button
+                            onClick={handleSubmitWithPhoto}
+                            disabled={!currentUploadUrl || updating}
+                            className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold disabled:opacity-50"
+                         >
+                            {updating ? <Loader2 className="animate-spin mx-auto"/> : 'Submit & Continue'}
+                         </button>
                      </div>
                  </div>
              </div>

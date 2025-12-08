@@ -1,3 +1,7 @@
+-- Add new columns to requests table for photo requirements
+ALTER TABLE requests ADD COLUMN IF NOT EXISTS arrival_photo_url TEXT;
+ALTER TABLE requests ADD COLUMN IF NOT EXISTS receipt_photo_url TEXT;
+
 -- Add new columns to requests table
 ALTER TABLE requests ADD COLUMN IF NOT EXISTS proof_url TEXT;
 ALTER TABLE requests ADD COLUMN IF NOT EXISTS pickup_lat FLOAT;
