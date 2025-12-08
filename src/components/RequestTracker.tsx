@@ -291,7 +291,8 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile, onCanc
               )}
 
               {/* Proof of Delivery Section */}
-              {req.status === 'delivered' && (
+              {/* Show proof if delivered OR if proof exists (even if status changed, e.g. disputed) */}
+              {(req.status === 'delivered' || req.proof_url) && (
                   <div className="mb-4">
                       <div className="bg-green-50 border border-green-100 rounded-xl p-3">
                           <p className="text-xs font-bold text-green-800 mb-2 uppercase">Proof of Delivery</p>
@@ -307,16 +308,19 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile, onCanc
                                   No proof image available
                               </div>
                           )}
-                          <div className="mt-3 flex gap-2">
-                              {currentUserId === req.student_id ? (
-                                <>
-                                    <button onClick={() => handleConfirm(req.id)} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-green-700 btn-press">Confirm Completion</button>
-                                    <button onClick={() => handleDispute(req.id)} className="px-4 bg-red-100 text-red-700 font-bold py-2 rounded-lg text-sm hover:bg-red-200 btn-press">Dispute</button>
-                                </>
-                              ) : (
-                                <div className="flex-1 bg-yellow-100 text-yellow-800 text-center font-bold py-2 rounded-lg text-sm">Waiting for Confirmation</div>
-                              )}
-                          </div>
+
+                          {req.status === 'delivered' && (
+                              <div className="mt-3 flex gap-2">
+                                  {currentUserId === req.student_id ? (
+                                    <>
+                                        <button onClick={() => handleConfirm(req.id)} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-green-700 btn-press">Confirm Completion</button>
+                                        <button onClick={() => handleDispute(req.id)} className="px-4 bg-red-100 text-red-700 font-bold py-2 rounded-lg text-sm hover:bg-red-200 btn-press">Dispute</button>
+                                    </>
+                                  ) : (
+                                    <div className="flex-1 bg-yellow-100 text-yellow-800 text-center font-bold py-2 rounded-lg text-sm">Waiting for Confirmation</div>
+                                  )}
+                              </div>
+                          )}
                       </div>
                   </div>
               )}
@@ -350,7 +354,43 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile, onCanc
             </div>
           </div>
         ))}
-        {pastRequests.length > 0 && <div className="pt-8 border-t stagger-enter" style={{animationDelay: '200ms'}}><h3 className="text-lg font-bold text-gray-600 mb-4">Past Errands</h3><div className="space-y-4">{pastRequests.map((req, i) => (<div key={req.id} style={{animationDelay: `${i*50}ms`}} className="stagger-enter bg-gray-50 rounded-xl p-4 flex justify-between items-center hover:bg-gray-100 transition-colors hover-lift"><div><div className="flex items-center gap-2"><span className="font-bold capitalize text-gray-900">{req.type}</span>{req.rating && <span className="flex items-center text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-bold"><Star size={10} className="fill-yellow-600 text-yellow-600 mr-1"/> {req.rating}</span>}</div><span className="text-gray-500 text-xs flex gap-2">{new Date(req.created_at).toLocaleDateString()} {req.runner_id && <RunnerInfo runnerId={req.runner_id} onClick={onViewProfile} />}</span>{req.status === 'cancelled' && req.cancellation_reason && <div className="text-[10px] text-red-500 mt-1">Reason: {req.cancellation_reason}</div>}</div>{!req.rating && req.status === 'completed' ? <button onClick={() => onRate(req, 0)} className="text-xs bg-black text-white px-3 py-1.5 rounded-lg font-bold hover:bg-gray-800 btn-press">Rate Now</button> : <div className={`text-sm font-medium px-2 py-1 rounded ${req.status === 'cancelled' ? 'text-red-700 bg-red-100' : req.status === 'disputed' ? 'text-red-700 bg-red-100' : 'text-green-700 bg-green-100'}`}>{req.status === 'cancelled' ? 'Cancelled' : req.status === 'disputed' ? 'Disputed' : 'Done'}</div>}</div>))}</div></div>}
+        {pastRequests.length > 0 && (
+            <div className="pt-8 border-t stagger-enter" style={{animationDelay: '200ms'}}>
+                <h3 className="text-lg font-bold text-gray-600 mb-4">Past Errands</h3>
+                <div className="space-y-4">
+                    {pastRequests.map((req, i) => (
+                        <div key={req.id} style={{animationDelay: `${i*50}ms`}} className="stagger-enter bg-gray-50 rounded-xl p-4 flex flex-col gap-3 hover:bg-gray-100 transition-colors hover-lift">
+                            <div className="flex justify-between items-center w-full">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold capitalize text-gray-900">{req.type}</span>
+                                        {req.rating && <span className="flex items-center text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-bold"><Star size={10} className="fill-yellow-600 text-yellow-600 mr-1"/> {req.rating}</span>}
+                                    </div>
+                                    <span className="text-gray-500 text-xs flex gap-2">{new Date(req.created_at).toLocaleDateString()} {req.runner_id && <RunnerInfo runnerId={req.runner_id} onClick={onViewProfile} />}</span>
+                                    {req.status === 'cancelled' && req.cancellation_reason && <div className="text-[10px] text-red-500 mt-1">Reason: {req.cancellation_reason}</div>}
+                                </div>
+                                {!req.rating && req.status === 'completed' ? (
+                                    <button onClick={() => onRate(req, 0)} className="text-xs bg-black text-white px-3 py-1.5 rounded-lg font-bold hover:bg-gray-800 btn-press">Rate Now</button>
+                                ) : (
+                                    <div className={`text-sm font-medium px-2 py-1 rounded ${req.status === 'cancelled' ? 'text-red-700 bg-red-100' : req.status === 'disputed' ? 'text-red-700 bg-red-100' : 'text-green-700 bg-green-100'}`}>
+                                        {req.status === 'cancelled' ? 'Cancelled' : req.status === 'disputed' ? 'Disputed' : 'Done'}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Photos for Past Requests */}
+                            {(req.arrival_photo_url || req.receipt_photo_url || req.proof_url) && (
+                                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar border-t border-gray-200 pt-2 mt-1">
+                                    {req.arrival_photo_url && <img src={req.arrival_photo_url} className="h-16 w-16 object-cover rounded-lg bg-gray-200 shrink-0 cursor-pointer" onClick={() => setViewImageUrl(req.arrival_photo_url!)} alt="Arrival"/>}
+                                    {req.receipt_photo_url && <img src={req.receipt_photo_url} className="h-16 w-16 object-cover rounded-lg bg-gray-200 shrink-0 cursor-pointer" onClick={() => setViewImageUrl(req.receipt_photo_url!)} alt="Receipt"/>}
+                                    {req.proof_url && <img src={req.proof_url} className="h-16 w-16 object-cover rounded-lg bg-gray-200 shrink-0 cursor-pointer" onClick={() => setViewImageUrl(req.proof_url!)} alt="Proof"/>}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )}
 
         {chatRequestId && (<div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 pop-in"><div className="w-full max-w-md bg-white rounded-xl overflow-hidden relative"><button className="absolute top-2 right-2 text-white z-10" onClick={()=>setChatRequestId(null)}><X/></button><ChatBox requestId={chatRequestId} currentUserId={currentUserId} /></div></div>)}
 
