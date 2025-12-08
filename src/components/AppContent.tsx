@@ -20,7 +20,7 @@ interface AppContentProps {
   // New: Handler for viewing other profiles
   setShowPublicProfileModal?: (userId: string) => void;
   onLogout: () => void;
-  fetchRequests: (profile: UserProfile | null) => Promise<void>;
+  fetchRequests: () => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   createRequest?: (data: any) => Promise<void>;
   updateRequestStatus: (id: string, status: string) => Promise<void>;
@@ -102,7 +102,7 @@ export default function AppContent({
           onClaim={(id) => assignRequest(id, currentUserId)}
           onUpdateStatus={updateRequestStatus}
           userId={currentUserId}
-          onRefresh={() => fetchRequests(userProfile)}
+          onRefresh={fetchRequests}
           userProfile={userProfile!}
           onViewProfile={setShowPublicProfileModal}
           onRateUser={setShowRatingModal}
