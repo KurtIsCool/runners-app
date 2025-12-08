@@ -50,6 +50,8 @@ export interface Request {
   lng?: number;
 
   // Proof & Completion
+  arrival_photo_url?: string;
+  receipt_photo_url?: string;
   proof_url?: string;
   confirmed_at?: string;
 
