@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { BookOpen, AlertCircle, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { BookOpen, AlertCircle, Mail, Lock, Loader2, ArrowRight, X } from 'lucide-react';
 import { type UserRole } from '../types';
 import AppLogo from './AppLogo';
+import { staticContent } from './StaticPages';
 
 const AuthScreen = ({ onLogin, onSignup }: { onLogin: (e: string, p: string) => Promise<void>, onSignup: (e: string, p: string, r: UserRole) => Promise<void> }) => {
     const [isLogin, setIsLogin] = useState(true);
@@ -11,6 +12,7 @@ const AuthScreen = ({ onLogin, onSignup }: { onLogin: (e: string, p: string) => 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [agreeTerms, setAgreeTerms] = useState(false);
+    const [showTerms, setShowTerms] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -37,7 +39,38 @@ const AuthScreen = ({ onLogin, onSignup }: { onLogin: (e: string, p: string) => 
     };
 
     return (
-      <div className="auth-split bg-gray-50 font-sans text-gray-900">
+      <div className="auth-split bg-gray-50 font-sans text-gray-900 relative">
+        {/* Terms Modal */}
+        {showTerms && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl animate-scale-in">
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50 rounded-t-3xl">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <staticContent.terms.icon className="text-blue-600" />
+                  {staticContent.terms.title}
+                </h2>
+                <button
+                  onClick={() => setShowTerms(false)}
+                  className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500 hover:text-gray-900"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-8 overflow-y-auto custom-scrollbar">
+                {staticContent.terms.body}
+              </div>
+              <div className="p-6 border-t border-gray-100 bg-gray-50 rounded-b-3xl flex justify-end">
+                <button
+                  onClick={() => setShowTerms(false)}
+                  className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors"
+                >
+                  I Understand
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* LEFT SIDE: Brand (Hidden on Mobile) */}
         <div className="hidden md:flex auth-left relative">
            <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
@@ -161,7 +194,7 @@ const AuthScreen = ({ onLogin, onSignup }: { onLogin: (e: string, p: string) => 
                         className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                       />
                       <label htmlFor="terms" className="text-sm text-gray-500">
-                        I agree to the <span className="text-blue-600 font-bold cursor-pointer">Terms and Conditions</span>
+                        I agree to the <span onClick={() => setShowTerms(true)} className="text-blue-600 font-bold cursor-pointer hover:underline">Terms and Conditions</span>
                       </label>
                     </div>
                   </div>
