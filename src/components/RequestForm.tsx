@@ -49,22 +49,28 @@ const RequestForm = ({ onSubmit, onCancel }: RequestFormProps) => {
       e.preventDefault();
       setLoading(true);
 
-      const itemCost = parseFloat(formData.item_cost) || 0;
-      const additionalCost = parseFloat(formData.additional_cost) || 0;
-      const fixedFee = 49;
-      const total = itemCost + fixedFee + additionalCost;
+      try {
+        const itemCost = parseFloat(formData.item_cost) || 0;
+        const additionalCost = parseFloat(formData.additional_cost) || 0;
+        const fixedFee = 49;
+        const total = itemCost + fixedFee + additionalCost;
 
-      await onSubmit({
-        ...formData,
-        item_cost: itemCost,
-        service_fee: fixedFee,
-        additional_cost: additionalCost,
-        additional_cost_reason: additionalCost > 0 ? formData.additional_cost_reason : null,
-        price_estimate: total, // Total = Item + Fee + Additional
-        lat: formData.pickup_lat,
-        lng: formData.pickup_lng
-      });
-      setLoading(false);
+        await onSubmit({
+          ...formData,
+          item_cost: itemCost,
+          service_fee: fixedFee,
+          additional_cost: additionalCost,
+          additional_cost_reason: additionalCost > 0 ? formData.additional_cost_reason : null,
+          price_estimate: total, // Total = Item + Fee + Additional
+          lat: formData.pickup_lat,
+          lng: formData.pickup_lng
+        });
+      } catch (error) {
+        console.error("Error creating request:", error);
+        alert("Failed to create request. Please try again.");
+      } finally {
+        setLoading(false);
+      }
     };
 
     const handleLocationSelect = async (lat: number, lng: number) => {
