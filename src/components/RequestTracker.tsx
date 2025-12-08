@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, CheckCircle, DollarSign, Navigation, Star, X, Package, Copy, MessageCircle, Phone, MapPin, User as UserIcon, QrCode, Banknote, Smartphone } from 'lucide-react';
+import { Clock, CheckCircle, DollarSign, Navigation, Star, X, Package, Copy, MessageCircle, Phone, MapPin, User as UserIcon, QrCode, Banknote, Smartphone, Store, Receipt } from 'lucide-react';
 import { type Request, type RequestStatus, type UserProfile } from '../types';
 import ChatBox from './ChatBox';
 import MapViewer from './MapViewer';
@@ -143,7 +143,7 @@ interface RequestTrackerProps {
 
 const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile, onCancel }: RequestTrackerProps) => {
     const [chatRequestId, setChatRequestId] = useState<string | null>(null);
-    const [viewProofId, setViewProofId] = useState<string | null>(null);
+    const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
     const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
 
     const handlePaymentSelection = async (method: 'gcash' | 'cash') => {
@@ -262,6 +262,34 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile, onCanc
                   </div>
               )}
 
+              {/* Progress Photos Section */}
+              {(req.arrival_photo_url || req.receipt_photo_url) && (
+                  <div className="mb-4 grid grid-cols-2 gap-3">
+                      {req.arrival_photo_url && (
+                          <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
+                              <p className="text-[10px] font-bold text-gray-500 mb-2 uppercase flex items-center gap-1"><Store size={10}/> Arrival</p>
+                              <img
+                                src={req.arrival_photo_url}
+                                alt="Arrival"
+                                className="w-full h-24 object-cover rounded-lg cursor-pointer bg-gray-100"
+                                onClick={() => setViewImageUrl(req.arrival_photo_url!)}
+                              />
+                          </div>
+                      )}
+                      {req.receipt_photo_url && (
+                          <div className="bg-purple-50 border border-purple-100 rounded-xl p-3">
+                              <p className="text-[10px] font-bold text-purple-800 mb-2 uppercase flex items-center gap-1"><Receipt size={10}/> Receipt</p>
+                              <img
+                                src={req.receipt_photo_url}
+                                alt="Receipt"
+                                className="w-full h-24 object-cover rounded-lg cursor-pointer bg-gray-100"
+                                onClick={() => setViewImageUrl(req.receipt_photo_url!)}
+                              />
+                          </div>
+                      )}
+                  </div>
+              )}
+
               {/* Proof of Delivery Section */}
               {req.status === 'delivered' && (
                   <div className="mb-4">
@@ -272,7 +300,7 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile, onCanc
                                 src={req.proof_url}
                                 alt="Proof"
                                 className="w-full h-32 object-cover rounded-lg cursor-pointer bg-gray-100"
-                                onClick={() => setViewProofId(req.id)}
+                                onClick={() => setViewImageUrl(req.proof_url!)}
                               />
                           ) : (
                               <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs italic">
@@ -327,9 +355,9 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile, onCanc
         {chatRequestId && (<div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 pop-in"><div className="w-full max-w-md bg-white rounded-xl overflow-hidden relative"><button className="absolute top-2 right-2 text-white z-10" onClick={()=>setChatRequestId(null)}><X/></button><ChatBox requestId={chatRequestId} currentUserId={currentUserId} /></div></div>)}
 
         {/* Fullscreen Image Preview */}
-        {viewProofId && (
-            <div className="fixed inset-0 z-[60] bg-black flex items-center justify-center p-4 pop-in" onClick={() => setViewProofId(null)}>
-                <img src={requests.find(r => r.id === viewProofId)?.proof_url} alt="Proof Fullscreen" className="max-w-full max-h-full object-contain" />
+        {viewImageUrl && (
+            <div className="fixed inset-0 z-[60] bg-black flex items-center justify-center p-4 pop-in" onClick={() => setViewImageUrl(null)}>
+                <img src={viewImageUrl} alt="Fullscreen Preview" className="max-w-full max-h-full object-contain" />
                 <button className="absolute top-4 right-4 text-white bg-white/20 p-2 rounded-full"><X/></button>
             </div>
         )}
