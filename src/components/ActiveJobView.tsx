@@ -92,8 +92,8 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
 
         const { error } = await supabase.from('requests').update(updateData).eq('id', job.id);
         if (error) {
-            console.error('Image save error:', error);
-            alert('Failed to save image. Please try again or use a smaller image.');
+            console.error('Image save error:', error, 'Payload size approx:', url.length);
+            alert(`Failed to save image. Details: ${error.message || error.details || 'Unknown error'}. Please try again or use a smaller image.`);
 
             // Revert local state on failure so user doesn't proceed with missing image
             if (uploadModalType === 'arrival') setArrivalPhotoUrl(null);

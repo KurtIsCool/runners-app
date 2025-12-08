@@ -44,9 +44,9 @@ export default function ProofUpload({ onUpload, currentUrl }: ProofUploadProps) 
                         return;
                     }
 
-                    // Calculate new dimensions (max 1024px)
-                    const MAX_WIDTH = 1024;
-                    const MAX_HEIGHT = 1024;
+                    // Calculate new dimensions (max 800px) to ensure payload fits in DB/API limits
+                    const MAX_WIDTH = 800;
+                    const MAX_HEIGHT = 800;
                     let width = img.width;
                     let height = img.height;
 
@@ -66,8 +66,8 @@ export default function ProofUpload({ onUpload, currentUrl }: ProofUploadProps) 
                     canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // Compress to JPEG with 0.7 quality
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    // Compress to JPEG with 0.5 quality for smaller payload
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
                     resolve(dataUrl);
                 };
                 img.onerror = (err) => reject(err);
