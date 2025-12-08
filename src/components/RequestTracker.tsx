@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, CheckCircle, DollarSign, Navigation, Star, X, Package, Copy, MessageCircle, Phone, MapPin, User as UserIcon, QrCode, Banknote, Smartphone } from 'lucide-react';
+import { Clock, CheckCircle, DollarSign, Navigation, Star, X, Package, Copy, MessageCircle, Phone, MapPin, User as UserIcon, QrCode, Banknote, Smartphone, Store, Receipt } from 'lucide-react';
 import { type Request, type RequestStatus, type UserProfile } from '../types';
 import ChatBox from './ChatBox';
 import MapViewer from './MapViewer';
@@ -143,7 +143,7 @@ interface RequestTrackerProps {
 
 const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile, onCancel }: RequestTrackerProps) => {
     const [chatRequestId, setChatRequestId] = useState<string | null>(null);
-    const [viewProofId, setViewProofId] = useState<string | null>(null);
+    const [viewImage, setViewImage] = useState<{url: string, title: string} | null>(null);
     const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
 
     const handlePaymentSelection = async (method: 'gcash' | 'cash') => {
@@ -262,34 +262,54 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile, onCanc
                   </div>
               )}
 
-              {/* Proof of Delivery Section */}
-              {req.status === 'delivered' && (
-                  <div className="mb-4">
-                      <div className="bg-green-50 border border-green-100 rounded-xl p-3">
-                          <p className="text-xs font-bold text-green-800 mb-2 uppercase">Proof of Delivery</p>
-                          {req.proof_url ? (
+              {/* Mission Progress Photos (Arrival, Receipt, Proof) */}
+              {(req.arrival_photo_url || req.receipt_photo_url || req.proof_url) && (
+                  <div className="mb-4 space-y-3">
+                      {req.arrival_photo_url && (
+                          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                               <p className="text-xs font-bold text-gray-600 mb-2 uppercase flex items-center gap-1"><Store size={12}/> Store Arrival</p>
+                               <img
+                                   src={req.arrival_photo_url}
+                                   alt="Store Arrival"
+                                   className="w-full h-32 object-cover rounded-lg cursor-pointer bg-gray-200"
+                                   onClick={() => setViewImage({ url: req.arrival_photo_url!, title: 'Store Arrival' })}
+                               />
+                          </div>
+                      )}
+                      {req.receipt_photo_url && (
+                          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                               <p className="text-xs font-bold text-gray-600 mb-2 uppercase flex items-center gap-1"><Receipt size={12}/> Receipt</p>
+                               <img
+                                   src={req.receipt_photo_url}
+                                   alt="Receipt"
+                                   className="w-full h-32 object-cover rounded-lg cursor-pointer bg-gray-200"
+                                   onClick={() => setViewImage({ url: req.receipt_photo_url!, title: 'Purchase Receipt' })}
+                               />
+                          </div>
+                      )}
+                      {req.proof_url && (
+                          <div className="bg-green-50 border border-green-100 rounded-xl p-3">
+                              <p className="text-xs font-bold text-green-800 mb-2 uppercase flex items-center gap-1"><CheckCircle size={12}/> Proof of Delivery</p>
                               <img
                                 src={req.proof_url}
                                 alt="Proof"
                                 className="w-full h-32 object-cover rounded-lg cursor-pointer bg-gray-100"
-                                onClick={() => setViewProofId(req.id)}
+                                onClick={() => setViewImage({ url: req.proof_url!, title: 'Proof of Delivery' })}
                               />
-                          ) : (
-                              <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs italic">
-                                  No proof image available
-                              </div>
-                          )}
-                          <div className="mt-3 flex gap-2">
-                              {currentUserId === req.student_id ? (
-                                <>
-                                    <button onClick={() => handleConfirm(req.id)} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-green-700 btn-press">Confirm Completion</button>
-                                    <button onClick={() => handleDispute(req.id)} className="px-4 bg-red-100 text-red-700 font-bold py-2 rounded-lg text-sm hover:bg-red-200 btn-press">Dispute</button>
-                                </>
-                              ) : (
-                                <div className="flex-1 bg-yellow-100 text-yellow-800 text-center font-bold py-2 rounded-lg text-sm">Waiting for Confirmation</div>
+                              {req.status === 'delivered' && (
+                                  <div className="mt-3 flex gap-2">
+                                      {currentUserId === req.student_id ? (
+                                        <>
+                                            <button onClick={() => handleConfirm(req.id)} className="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-green-700 btn-press">Confirm Completion</button>
+                                            <button onClick={() => handleDispute(req.id)} className="px-4 bg-red-100 text-red-700 font-bold py-2 rounded-lg text-sm hover:bg-red-200 btn-press">Dispute</button>
+                                        </>
+                                      ) : (
+                                        <div className="flex-1 bg-yellow-100 text-yellow-800 text-center font-bold py-2 rounded-lg text-sm">Waiting for Confirmation</div>
+                                      )}
+                                  </div>
                               )}
                           </div>
-                      </div>
+                      )}
                   </div>
               )}
 
@@ -327,10 +347,13 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile, onCanc
         {chatRequestId && (<div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 pop-in"><div className="w-full max-w-md bg-white rounded-xl overflow-hidden relative"><button className="absolute top-2 right-2 text-white z-10" onClick={()=>setChatRequestId(null)}><X/></button><ChatBox requestId={chatRequestId} currentUserId={currentUserId} /></div></div>)}
 
         {/* Fullscreen Image Preview */}
-        {viewProofId && (
-            <div className="fixed inset-0 z-[60] bg-black flex items-center justify-center p-4 pop-in" onClick={() => setViewProofId(null)}>
-                <img src={requests.find(r => r.id === viewProofId)?.proof_url} alt="Proof Fullscreen" className="max-w-full max-h-full object-contain" />
-                <button className="absolute top-4 right-4 text-white bg-white/20 p-2 rounded-full"><X/></button>
+        {viewImage && (
+            <div className="fixed inset-0 z-[60] bg-black flex items-center justify-center p-4 pop-in" onClick={() => setViewImage(null)}>
+                <div className="relative max-w-full max-h-full">
+                    <img src={viewImage.url} alt={viewImage.title} className="max-w-full max-h-[90vh] object-contain rounded-lg" />
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm font-bold">{viewImage.title}</div>
+                    <button className="absolute -top-12 right-0 text-white p-2"><X/></button>
+                </div>
             </div>
         )}
 
