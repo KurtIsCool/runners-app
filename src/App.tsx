@@ -81,61 +81,23 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchRequests = useCallback(async (profile: UserProfile | null) => {
-     if (!user || !profile) return;
-
-     let query = supabase.from('requests').select('*').order('created_at', { ascending: false }).limit(100);
-
-     if (profile.role === 'student') {
-        query = query.eq('student_id', user.id);
-     } else {
-        // For runners: Get open requests OR their own assigned requests
-        query = query.or(`status.eq.requested,runner_id.eq.${user.id}`);
-     }
-
-     const { data, error } = await query;
-
-     if (error) {
-        console.error("Error fetching requests:", error);
-     } else if (data) {
-        setRequests(data);
-     }
-  }, [user]);
-
-  // Initial Data Load (Profile + Requests)
   useEffect(() => {
-    const initData = async () => {
+    const fetchProfile = async () => {
       if (!user) return;
-
-      // 1. Fetch Profile
-      let profile = userProfile;
-      // Ensure profile matches current user
-      if (!profile || profile.id !== user.id) {
-          const { data, error } = await supabase.from('users').select('*').eq('id', user.id).single();
-          if (data) {
-              setUserProfile(data);
-              profile = data;
-              if (view === 'home') setView('home');
-          }
-          else if (error?.code === 'PGRST116') {
-              const email = user.email || '';
-              const newProfile = { id: user.id, name: email.split('@')[0], email: email, role: 'student' as UserRole };
-              await supabase.from('users').insert(newProfile);
-              window.location.reload();
-              return;
-          }
+      const { data, error } = await supabase.from('users').select('*').eq('id', user.id).single();
+      if (data) { 
+          setUserProfile(data); 
+          if (view === 'home') setView('home'); 
+      } 
+      else if (error?.code === 'PGRST116') { 
+          const email = user.email || '';
+          await supabase.from('users').insert({ id: user.id, name: email.split('@')[0], email: email, role: 'student' });
+          window.location.reload(); 
       }
-
-      // 2. Fetch Requests
-      if (profile) {
-          await fetchRequests(profile);
-      }
-
       setLoading(false);
     };
-
-    if (user) initData();
-  }, [user, fetchRequests]); // Removed 'view' dependency to prevent re-fetching on view change
+    if (user) fetchProfile();
+  }, [user, view]);
 
   // Fetch Public Profile when showPublicProfileId changes
   useEffect(() => {
@@ -197,35 +159,30 @@ export default function App() {
     fetchPublicProfile();
   }, [showPublicProfileId]);
 
-  useEffect(() => {
-    if (user && userProfile) {
-        const ch = supabase.channel('public:requests').on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, (p: RealtimePostgresChangesPayload<Request>) => {
-            if (p.eventType === 'INSERT') {
-                const newReq = p.new;
-                // Filter incoming INSERTs
-                if (userProfile.role === 'student' && newReq.student_id !== user.id) return;
-                if (userProfile.role === 'runner' && newReq.status !== 'requested' && newReq.runner_id !== user.id) return;
+  const fetchRequests = useCallback(async () => {
+     const { data } = await supabase.from('requests').select('*').order('created_at', { ascending: false });
+     if (data) setRequests(data);
+  }, []);
 
-                setRequests(prev => [newReq, ...prev]);
-            }
-            else if (p.eventType === 'UPDATE') {
-                setRequests(prev => {
-                    const exists = prev.find(r => r.id === p.new.id);
-                    if (exists) {
-                         return prev.map(r => r.id === p.new.id ? p.new : r);
-                    } else {
-                         // If it doesn't exist but is now relevant (e.g. assigned to me), we should add it?
-                         // Simplification: For now, we mainly rely on 'requested' jobs being there.
-                         // If a job becomes 'requested' (unlikely from other state) or assigned to me, we might miss it if we don't fetch.
-                         // But usually UPDATE is for existing tracked jobs.
-                         return prev;
-                    }
-                });
-            }
+  useEffect(() => {
+    if (user) {
+        // Calling async function inside useEffect without setState warning
+        const load = async () => {
+            await fetchRequests();
+        };
+        load();
+    }
+  }, [user, fetchRequests]);
+
+  useEffect(() => {
+    if (user) {
+        const ch = supabase.channel('public:requests').on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, (p: RealtimePostgresChangesPayload<Request>) => {
+            if (p.eventType === 'INSERT') setRequests(prev => [p.new, ...prev]);
+            else if (p.eventType === 'UPDATE') setRequests(prev => prev.map(r => r.id === p.new.id ? p.new : r));
         }).subscribe();
         return () => { supabase.removeChannel(ch); };
     }
-  }, [user, userProfile]);
+  }, [user]);
 
   const handleAuth = async (type: 'login'|'signup', ...args: unknown[]) => {
     const email = args[0] as string;
