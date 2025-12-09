@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, CheckCircle, DollarSign, Navigation, Star, X, Package, Copy, MessageCircle, Phone, MapPin, User as UserIcon, QrCode, Banknote, Smartphone, Store, Receipt } from 'lucide-react';
+import { Clock, CheckCircle, DollarSign, Navigation, Star, X, Package, Copy, MessageCircle, Phone, MapPin, User as UserIcon, QrCode, Banknote, Smartphone, Store, Receipt, RefreshCw } from 'lucide-react';
 import { type Request, type RequestStatus, type UserProfile } from '../types';
 import ChatBox from './ChatBox';
 import MapViewer from './MapViewer';
@@ -139,12 +139,22 @@ interface RequestTrackerProps {
     onRate: (req: Request, rating: number, comment?: string) => void;
     onViewProfile?: (userId: string) => void;
     onCancel?: (id: string, reason: string) => void;
+    onRefresh?: () => void;
 }
 
-const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile, onCancel }: RequestTrackerProps) => {
+const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile, onCancel, onRefresh }: RequestTrackerProps) => {
     const [chatRequestId, setChatRequestId] = useState<string | null>(null);
     const [viewImageUrl, setViewImageUrl] = useState<string | null>(null);
     const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const handleRefresh = async () => {
+        if (onRefresh) {
+            setIsRefreshing(true);
+            await onRefresh();
+            setTimeout(() => setIsRefreshing(false), 500);
+        }
+    };
 
     const handlePaymentSelection = async (method: 'gcash' | 'cash') => {
         if (!acceptingRequestId) return;
@@ -207,7 +217,18 @@ const RequestTracker = ({ requests, currentUserId, onRate, onViewProfile, onCanc
 
     return (
       <div className="space-y-6 pb-24 animate-slide-up">
-        <div className="flex justify-between items-end"><h2 className="text-2xl font-bold text-gray-900">Track Errands</h2></div>
+        <div className="flex justify-between items-end">
+            <h2 className="text-2xl font-bold text-gray-900">Track Errands</h2>
+            {onRefresh && (
+                <button
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="bg-white border p-2 rounded-full shadow-sm hover:bg-gray-50 transition-all btn-press"
+                >
+                    <RefreshCw size={18} className={`text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </button>
+            )}
+        </div>
         {activeRequests.length === 0 && <div className="bg-white p-12 rounded-2xl border-dashed border-2 border-gray-200 text-center pop-in"><div className="bg-gray-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"><Package className="text-gray-300" size={40} /></div><h3 className="font-bold text-gray-900 mb-1">No active errands</h3><p className="text-gray-500">Create a request to get started!</p></div>}
         {activeRequests.map((req, i) => (
           <div key={req.id} style={{animationDelay: `${i*100}ms`}} className="stagger-enter bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover-lift">

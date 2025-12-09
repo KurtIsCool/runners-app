@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera, X, Banknote, Smartphone, Store, Receipt } from 'lucide-react';
+import { Minimize2, QrCode, CheckCircle, ShoppingBag, Star, MapPin, Navigation, ArrowRight, Loader2, MessageCircle, Camera, X, Banknote, Smartphone, Store, Receipt, RefreshCw } from 'lucide-react';
 import AppLogo from './AppLogo';
 import { type Request, type UserProfile, type RequestStatus } from '../types';
 import ChatBox from './ChatBox';
@@ -8,9 +8,10 @@ import { supabase } from '../lib/supabase';
 
 type UploadType = 'none' | 'arrival' | 'receipt' | 'delivery';
 
-const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRateUser, onCancel }: { job: Request, userId: string, onUpdateStatus: (id: string, status: RequestStatus) => void, userProfile: UserProfile, onClose: () => void, onRateUser?: (req: Request) => void, onCancel?: (id: string, reason: string) => void }) => {
+const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRateUser, onCancel, onRefresh }: { job: Request, userId: string, onUpdateStatus: (id: string, status: RequestStatus) => void, userProfile: UserProfile, onClose: () => void, onRateUser?: (req: Request) => void, onCancel?: (id: string, reason: string) => void, onRefresh?: () => void }) => {
     const [updating, setUpdating] = useState(false);
     const [showPayment, setShowPayment] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [studentName, setStudentName] = useState<string>('Student');
 
     // Photo states
@@ -32,6 +33,14 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
         };
         fetchStudentName();
     }, [job.student_id]);
+
+    const handleRefresh = async () => {
+        if (onRefresh) {
+            setIsRefreshing(true);
+            await onRefresh();
+            setTimeout(() => setIsRefreshing(false), 500);
+        }
+    };
 
     const confirmPayment = async () => {
         if (!confirm("Confirm that you have received the payment?")) return;
@@ -142,7 +151,12 @@ const ActiveJobView = ({ job, userId, onUpdateStatus, userProfile, onClose, onRa
         {/* Left Side: Job Details */}
         <div className="w-full md:w-1/2 lg:w-1/3 bg-white flex flex-col border-r shadow-xl z-10 md:h-full order-1 h-[45vh]">
           <div className="bg-blue-900 text-white p-6 pb-6 relative overflow-hidden shrink-0">
-             <div className="absolute top-4 right-4 z-20">
+             <div className="absolute top-4 right-4 z-20 flex gap-2">
+               {onRefresh && (
+                   <button onClick={handleRefresh} disabled={isRefreshing} className="bg-white/20 hover:bg-white/30 p-2 rounded-full backdrop-blur-sm transition-all">
+                       <RefreshCw size={20} className={`text-white ${isRefreshing ? 'animate-spin' : ''}`} />
+                   </button>
+               )}
                <button onClick={onClose} className="bg-white/20 hover:bg-white/30 p-2 rounded-full backdrop-blur-sm transition-all">
                  <Minimize2 size={20} className="text-white"/>
                </button>
