@@ -58,7 +58,7 @@ const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, use
     };
 
     if (viewActiveJob && myActiveJob) {
-        return <ActiveJobView job={myActiveJob} userId={userId} onUpdateStatus={onUpdateStatus} userProfile={userProfile} onClose={() => setViewActiveJob(false)} onRateUser={onRateUser} onCancel={onCancelRequest} />;
+        return <ActiveJobView job={myActiveJob} userId={userId} onUpdateStatus={onUpdateStatus} userProfile={userProfile} onClose={() => setViewActiveJob(false)} onRateUser={onRateUser} onCancel={onCancelRequest} onRefresh={onRefresh} />;
     }
 
     const openRequests = requests.filter(r => r.status === 'requested');

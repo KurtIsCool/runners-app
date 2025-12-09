@@ -123,6 +123,7 @@ export default function AppContent({
         }}
         onCancel={(id, reason) => cancelRequest(id, reason)}
         onViewProfile={setShowPublicProfileModal}
+        onRefresh={fetchRequests}
       />
     );
   }
