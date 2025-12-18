@@ -1,0 +1,50 @@
+import { useState } from 'react';
+import { RefreshCw, Navigation, ArrowRight, Bike, ChevronRight } from 'lucide-react';
+import { type Request, type UserProfile, type RequestStatus } from '../types';
+import ActiveJobView from './ActiveJobView';
+
+const Marketplace = ({ requests, onClaim, onUpdateStatus, userId, onRefresh, userProfile }: { requests: Request[], onClaim: (id: string) => void, onUpdateStatus: (id: string, status: RequestStatus) => void, userId: string, onRefresh: () => void, userProfile: UserProfile }) => {
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [viewActiveJob, setViewActiveJob] = useState(false);
+    const handleRefresh = async () => { setIsRefreshing(true); await onRefresh(); setTimeout(() => setIsRefreshing(false), 500); };
+
+    const myActiveJob = requests.find(r => r.runner_id === userId && r.status !== 'completed' && r.status !== 'cancelled');
+
+    if (viewActiveJob && myActiveJob) {
+        return <ActiveJobView job={myActiveJob} userId={userId} onUpdateStatus={onUpdateStatus} userProfile={userProfile} onClose={() => setViewActiveJob(false)} />;
+    }
+
+    const openRequests = requests.filter(r => r.status === 'requested');
+
+    return (
+      <div className="space-y-6 pb-24 animate-slide-up">
+        {/* Banner for Active Job when minimized */}
+        {myActiveJob && (
+            <div className="bg-blue-600 text-white p-4 rounded-xl flex items-center justify-between shadow-lg cursor-pointer hover:bg-blue-700 transition" onClick={() => setViewActiveJob(true)}>
+               <div className="flex items-center gap-3">
+                  <div className="bg-white/20 p-2 rounded-lg"><Bike size={20} className="animate-pulse"/></div>
+                  <div><div className="font-bold text-sm">Mission in Progress</div><p className="text-xs text-blue-100">Click to resume</p></div>
+               </div>
+               <ChevronRight />
+            </div>
+        )}
+
+        <div className="flex justify-between items-center mb-4"><div><h2 className="text-2xl font-bold text-gray-900">Job Board</h2><p className="text-gray-500 text-sm">Accept a job to start working</p></div><button onClick={handleRefresh} disabled={isRefreshing} className="bg-white border p-2 rounded-full shadow-sm hover:bg-gray-50 transition-all btn-press"><RefreshCw size={18} className={`text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`}/></button></div>
+        {openRequests.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-gray-300 pop-in"><div className="bg-gray-50 w-20 h-20 rounded-full flex items-center justify-center mb-4"><Navigation className="text-gray-400" size={32} /></div><div className="text-gray-900 font-bold text-lg">No jobs available</div><p className="text-gray-500">Wait for students to post...</p></div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {openRequests.map((req, i) => (
+              <div key={req.id} style={{animationDelay: `${i*100}ms`}} className="stagger-enter bg-white rounded-2xl shadow-sm border border-gray-100 hover-lift transition-all duration-200 p-5 group">
+                <div className="flex items-start justify-between mb-4"><div className="flex items-center gap-3"><div className="bg-blue-50 p-3 rounded-xl text-2xl">{req.type === 'food' ? '🍔' : req.type === 'printing' ? '🖨️' : '📦'}</div><div><h3 className="font-bold text-lg text-gray-900 capitalize">{req.type}</h3><span className="text-xs text-gray-500">{new Date(req.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div></div><div className="font-bold text-xl text-green-600 mt-6">₱{req.price_estimate}</div></div>
+                <div className="space-y-2 mb-6 border-l-2 border-gray-100 pl-3"><div className="text-sm text-gray-600 truncate"><span className="font-bold text-xs uppercase text-gray-400 mr-2">From</span> {req.pickup_address}</div><div className="text-sm text-gray-600 truncate"><span className="font-bold text-xs uppercase text-gray-400 mr-2">To</span> {req.dropoff_address}</div></div>
+                <button onClick={() => onClaim(req.id)} className="w-full bg-black text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors flex justify-center items-center gap-2 btn-press">Accept Job <ArrowRight size={16}/></button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+};
+
+export default Marketplace;
